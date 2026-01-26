@@ -5,11 +5,23 @@ Processes Word documents and matches images to generate a CSV for article import
 
 import os
 import csv
+import shutil
 import zipfile
+import argparse
 from pathlib import Path
 from docx import Document
-import argparse
 from datetime import datetime
+from collections import Counter
+
+# Try to import spaCy for entity extraction (optional)
+try:
+    import spacy
+    nlp = spacy.load("en_core_web_sm")
+    SPACY_AVAILABLE = True
+except (ImportError, OSError):
+    SPACY_AVAILABLE = False
+    print("⚠ spaCy not available. Install with: pip install spacy && python -m spacy download en_core_web_sm")
+    print("  Entity extraction will be skipped.\n")
 
 
 def extract_text_from_docx(docx_path):
@@ -87,6 +99,37 @@ def find_matching_images(article_name, image_files, match_length=10):
     return matching_images
 
 
+def extract_entities(text, top_n=5):
+    """
+    Extract top N named entities from text using spaCy.
+    Returns comma-separated string of entities.
+    """
+    if not SPACY_AVAILABLE or not text:
+        return ""
+    
+    try:
+        # Process text with spaCy
+        doc = nlp(text[:10000])  # Limit to first 10k chars for performance
+        
+        # Extract entities, filtering for useful types
+        # PERSON, ORG (organizations), GPE (countries/cities), EVENT, PRODUCT
+        entity_types = {'PERSON', 'ORG', 'GPE', 'EVENT', 'PRODUCT', 'LAW'}
+        entities = [
+            ent.text.strip() 
+            for ent in doc.ents 
+            if ent.label_ in entity_types and len(ent.text.strip()) > 2
+        ]
+        
+        # Count frequency and get top N
+        entity_counts = Counter(entities)
+        top_entities = [entity for entity, count in entity_counts.most_common(top_n)]
+        
+        return ', '.join(top_entities)
+    except Exception as e:
+        print(f"    ⚠ Entity extraction failed: {e}")
+        return ""
+
+
 def process_directory(input_dir, output_csv):
     """Process all Word documents and images in a directory."""
     input_path = Path(input_dir)
@@ -143,6 +186,12 @@ def process_directory(input_dir, output_csv):
         else:
             meta_desc = title[:160]
         
+        # Extract entities for tags
+        full_text = ' '.join(paragraphs)
+        entity_tags = extract_entities(full_text)
+        if entity_tags:
+            print(f"  - Extracted tags: {entity_tags}")
+        
         # Create article entry matching the CSV format
         article = {
             'URL Slug': '',  # Empty - will be auto-generated
@@ -154,7 +203,7 @@ def process_directory(input_dir, output_csv):
             'Meta Image Alt text': title,
             'Author': '',  # Empty - can be set manually
             'Category ': '',  # Empty - note the space in column name
-            'Blog Post Tags': '',  # Empty - can be set manually
+            'Blog Post Tags': entity_tags,  # Auto-extracted entities
             'Blog Post Content': html_content
         }
         
@@ -176,7 +225,9 @@ def process_directory(input_dir, output_csv):
         
         print(f"\n✓ CSV created: {output_csv}")
         print(f"  Total articles: {len(articles)}")
-        print(f"\nNote: URL Slug, Author, Category, and Tags are empty.")
+        if SPACY_AVAILABLE:
+            print(f"\n✓ Entity extraction enabled - tags auto-generated")
+        print(f"\nNote: URL Slug, Author, and Category are empty.")
         print(f"      These can be filled in manually or the system will auto-generate.")
     else:
         print("\n✗ No articles found to process")
@@ -194,8 +245,7 @@ def process_zip(zip_path, output_csv):
     process_directory(extract_dir, output_csv)
     
     # Optional: Clean up extracted files
-    # import shutil
-    # shutil.rmtree(extract_dir)
+    shutil.rmtree(extract_dir)
 
 
 def main():
