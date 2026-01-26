@@ -92,24 +92,43 @@ h3 {
     text-transform: capitalize;
 }
 
-.cp-article-tag.business {
-    background: #10b981;
+/* Hijack existing blog tags */
+.blog-tag {
+    display: inline-block !important;
+    background: #3b82f6 !important;
+    color: white !important;
+    padding: clamp(2px, 0.4vw, 3px) clamp(6px, 0.8vw, 8px) !important;
+    border-radius: 3px !important;
+    font-size: clamp(0.625rem, 0.75vw, 0.7rem) !important;
+    font-weight: 600 !important;
+    text-transform: capitalize !important;
+    margin-right: clamp(4px, 0.6vw, 6px) !important;
 }
 
-.cp-article-tag.politics {
-    background: #8b5cf6;
+/* Color variations for both tag types */
+.cp-article-tag.business,
+.blog-tag:contains("Business") {
+    background: #10b981 !important;
 }
 
-.cp-article-tag.sports {
-    background: #f59e0b;
+.cp-article-tag.politics,
+.blog-tag:contains("Politics") {
+    background: #8b5cf6 !important;
 }
 
-.cp-article-tag.education {
-    background: #06b6d4;
+.cp-article-tag.sports,
+.blog-tag:contains("Sports") {
+    background: #f59e0b !important;
 }
 
-.cp-article-tag.health {
-    background: #ec4899;
+.cp-article-tag.education,
+.blog-tag:contains("Education") {
+    background: #06b6d4 !important;
+}
+
+.cp-article-tag.health,
+.blog-tag:contains("Health") {
+    background: #ec4899 !important;
 }
 
 /* Article Title */
@@ -219,4 +238,8 @@ h3 {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+}
+
+.blog-image.blog-image-corner.blog-image-compact {
+    object-fit: contain;
 }
