@@ -114,158 +114,169 @@
 (function() {
     'use strict';
 
-    // Configuration - can be overridden by setting window.ALGOLIA_ARTICLE_LIST_CONFIG before this script loads
-    const config = window.ALGOLIA_ARTICLE_LIST_CONFIG || {
-        maxArticles: 10,
-        category: null,  // Will be auto-detected from URL
-        tag: null,       // Will be auto-detected from URL
-        sortBy: 'publishedAt:desc'  // Sort by most recent
-    };
-
-    // Algolia configuration
-    const ALGOLIA_APP_ID = 'L5HJO2NLX1';
-    const ALGOLIA_SEARCH_KEY = 'c458238e59f4e945749c9981281b8f1e';
-    const ALGOLIA_INDEX = 'prod_CarolinaPanorama';
-
-    // Initialize Algolia client
-    const searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
-    const index = searchClient.initIndex(ALGOLIA_INDEX);
-
-    // Parse URL for category or tag
-    function parseUrlFilters() {
-        const urlPath = window.location.pathname;
-        
-        // Check for category: /category/business or /article-feed/category/business
-        const categoryMatch = urlPath.match(/\/category\/([^\/]+)/);
-        if (categoryMatch) {
-            return { type: 'category', value: decodeURIComponent(categoryMatch[1]) };
+    // Wait for algoliasearch to be available
+    function waitForAlgolia(callback) {
+        if (typeof algoliasearch !== 'undefined') {
+            callback();
+        } else {
+            setTimeout(() => waitForAlgolia(callback), 100);
         }
-        
-        // Check for tag: /tag/education
-        const tagMatch = urlPath.match(/\/tag\/([^\/]+)/);
-        if (tagMatch) {
-            const tagSlug = decodeURIComponent(tagMatch[1]);
-            // Convert slug to readable format (dash to space, capitalize)
-            const tagName = tagSlug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-            return { type: 'tag', value: tagName };
-        }
-        
-        return null;
     }
 
-    // Build Algolia filters
-    function buildFilters() {
-        const urlFilter = parseUrlFilters();
-        const filters = [];
-        
-        // URL-based filters take precedence
-        if (urlFilter) {
-            if (urlFilter.type === 'category') {
-                filters.push(`categories:"${urlFilter.value}"`);
-            } else if (urlFilter.type === 'tag') {
-                filters.push(`tags:"${urlFilter.value}"`);
+    waitForAlgolia(function() {
+        // Configuration - can be overridden by setting window.ALGOLIA_ARTICLE_LIST_CONFIG before this script loads
+        const config = window.ALGOLIA_ARTICLE_LIST_CONFIG || {
+            maxArticles: 10,
+            category: null,  // Will be auto-detected from URL
+            tag: null,       // Will be auto-detected from URL
+            sortBy: 'publishedAt:desc'  // Sort by most recent
+        };
+
+        // Algolia configuration
+        const ALGOLIA_APP_ID = 'L5HJO2NLX1';
+        const ALGOLIA_SEARCH_KEY = 'c458238e59f4e945749c9981281b8f1e';
+        const ALGOLIA_INDEX = 'prod_CarolinaPanorama';
+
+        // Initialize Algolia client
+        const searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
+        const index = searchClient.initIndex(ALGOLIA_INDEX);
+
+        // Parse URL for category or tag
+        function parseUrlFilters() {
+            const urlPath = window.location.pathname;
+            
+            // Check for category: /category/business or /article-feed/category/business
+            const categoryMatch = urlPath.match(/\/category\/([^\/]+)/);
+            if (categoryMatch) {
+                return { type: 'category', value: decodeURIComponent(categoryMatch[1]) };
             }
-        } 
-        // Fallback to config
-        else {
-            if (config.category) {
-                filters.push(`categories:"${config.category}"`);
+            
+            // Check for tag: /tag/education
+            const tagMatch = urlPath.match(/\/tag\/([^\/]+)/);
+            if (tagMatch) {
+                const tagSlug = decodeURIComponent(tagMatch[1]);
+                // Convert slug to readable format (dash to space, capitalize)
+                const tagName = tagSlug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                return { type: 'tag', value: tagName };
             }
-            if (config.tag) {
-                filters.push(`tags:"${config.tag}"`);
-            }
+            
+            return null;
         }
-        
-        return filters.join(' AND ');
-    }
 
-    // Format date
-    function formatDate(timestamp) {
-        if (!timestamp) return '';
-        const date = new Date(timestamp * 1000);
-        return date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
-    }
+        // Build Algolia filters
+        function buildFilters() {
+            const urlFilter = parseUrlFilters();
+            const filters = [];
+            
+            // URL-based filters take precedence
+            if (urlFilter) {
+                if (urlFilter.type === 'category') {
+                    filters.push(`categories:"${urlFilter.value}"`);
+                } else if (urlFilter.type === 'tag') {
+                    filters.push(`tags:"${urlFilter.value}"`);
+                }
+            } 
+            // Fallback to config
+            else {
+                if (config.category) {
+                    filters.push(`categories:"${config.category}"`);
+                }
+                if (config.tag) {
+                    filters.push(`tags:"${config.tag}"`);
+                }
+            }
+            
+            return filters.join(' AND ');
+        }
 
-    // Create article card HTML
-    function createArticleCard(article) {
-        const categories = article.categories || [];
-        const categoryTags = categories.slice(0, 2)
-            .map(cat => `<span class="cp-article-tag ${cat.toLowerCase().replace(/\s+/g, '-')}">${cat}</span>`)
-            .join(' ');
+        // Format date
+        function formatDate(timestamp) {
+            if (!timestamp) return '';
+            const date = new Date(timestamp * 1000);
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
 
-        const description = article.description || article.excerpt || '';
-        const truncatedDesc = description.length > 200 
-            ? description.substring(0, 200) + '...' 
-            : description;
+        // Create article card HTML
+        function createArticleCard(article) {
+            const categories = article.categories || [];
+            const categoryTags = categories.slice(0, 2)
+                .map(cat => `<span class="cp-article-tag ${cat.toLowerCase().replace(/\s+/g, '-')}">${cat}</span>`)
+                .join(' ');
 
-        return `
-            <div class="article-list-item">
-                <article class="cp-article-card">
-                    <a href="/post/${article.objectID}" class="cp-article-card-link">
-                        <div class="cp-article-content">
-                            ${categoryTags ? `<div class="cp-article-tags">${categoryTags}</div>` : ''}
-                            <h3 class="cp-article-title">${article.title || 'Untitled'}</h3>
-                            <div class="cp-article-meta">
-                                ${article.author ? `<span class="cp-article-author">${article.author}</span>` : ''}
-                                <span class="cp-article-date">${formatDate(article.publishedAt)}</span>
+            const description = article.description || article.excerpt || '';
+            const truncatedDesc = description.length > 200 
+                ? description.substring(0, 200) + '...' 
+                : description;
+
+            return `
+                <div class="article-list-item">
+                    <article class="cp-article-card">
+                        <a href="/post/${article.objectID}" class="cp-article-card-link">
+                            <div class="cp-article-content">
+                                ${categoryTags ? `<div class="cp-article-tags">${categoryTags}</div>` : ''}
+                                <h3 class="cp-article-title">${article.title || 'Untitled'}</h3>
+                                <div class="cp-article-meta">
+                                    ${article.author ? `<span class="cp-article-author">${article.author}</span>` : ''}
+                                    <span class="cp-article-date">${formatDate(article.publishedAt)}</span>
+                                </div>
+                                ${truncatedDesc ? `<p class="cp-article-description">${truncatedDesc}</p>` : ''}
                             </div>
-                            ${truncatedDesc ? `<p class="cp-article-description">${truncatedDesc}</p>` : ''}
-                        </div>
-                        <img src="${article.image || 'https://via.placeholder.com/280x180'}" 
-                             alt="${article.title || 'Article'}" 
-                             class="cp-article-image"
-                             loading="lazy">
-                    </a>
-                </article>
-            </div>
-        `;
-    }
-
-    // Fetch and display articles
-    async function loadArticles() {
-        const container = document.getElementById('algolia-article-list');
-        
-        try {
-            const filters = buildFilters();
-            
-            const searchParams = {
-                hitsPerPage: config.maxArticles,
-                page: 0
-            };
-            
-            if (filters) {
-                searchParams.filters = filters;
-            }
-
-            const { hits } = await index.search('', searchParams);
-
-            if (hits.length === 0) {
-                container.innerHTML = '<div class="article-list-empty">No articles found.</div>';
-                return;
-            }
-
-            const articlesHtml = hits.map(article => createArticleCard(article)).join('');
-            container.innerHTML = articlesHtml;
-
-        } catch (error) {
-            console.error('Error loading articles:', error);
-            container.innerHTML = `
-                <div class="article-list-error">
-                    Failed to load articles. Please try again later.
+                            <img src="${article.image || 'https://via.placeholder.com/280x180'}" 
+                                 alt="${article.title || 'Article'}" 
+                                 class="cp-article-image"
+                                 loading="lazy">
+                        </a>
+                    </article>
                 </div>
             `;
         }
-    }
 
-    // Load articles when DOM is ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', loadArticles);
-    } else {
-        loadArticles();
-    }
+        // Fetch and display articles
+        async function loadArticles() {
+            const container = document.getElementById('algolia-article-list');
+            
+            try {
+                const filters = buildFilters();
+                
+                const searchParams = {
+                    hitsPerPage: config.maxArticles,
+                    page: 0
+                };
+                
+                if (filters) {
+                    searchParams.filters = filters;
+                }
+
+                const { hits } = await index.search('', searchParams);
+
+                if (hits.length === 0) {
+                    container.innerHTML = '<div class="article-list-empty">No articles found.</div>';
+                    return;
+                }
+
+                const articlesHtml = hits.map(article => createArticleCard(article)).join('');
+                container.innerHTML = articlesHtml;
+
+            } catch (error) {
+                console.error('Error loading articles:', error);
+                container.innerHTML = `
+                    <div class="article-list-error">
+                        Failed to load articles. Please try again later.
+                    </div>
+                `;
+            }
+        }
+
+        // Load articles when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadArticles);
+        } else {
+            loadArticles();
+        }
+    });
 })();
 </script>
