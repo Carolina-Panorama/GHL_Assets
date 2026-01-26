@@ -1,0 +1,228 @@
+<!-- Trending/Editor's Picks Carousel Widget -->
+<!-- Include shared-article-card-styles.css in your page -->
+<!-- Define window.TRENDING_ARTICLES in head tracking code with article URLs -->
+
+<style>
+    .trending-section-wrapper {
+        width: 100%;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .trending-section-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .trending-section-icon {
+        font-size: 1.5rem;
+    }
+
+    .trending-section-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin: 0;
+    }
+
+    .trending-carousel-container {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .trending-carousel-track {
+        display: flex;
+        gap: 20px;
+        overflow-x: auto;
+        scroll-behavior: smooth;
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e0 #f7fafc;
+        padding-bottom: 10px;
+    }
+
+    .trending-carousel-track::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    .trending-carousel-track::-webkit-scrollbar-track {
+        background: #f7fafc;
+        border-radius: 4px;
+    }
+
+    .trending-carousel-track::-webkit-scrollbar-thumb {
+        background: #cbd5e0;
+        border-radius: 4px;
+    }
+
+    .trending-carousel-track::-webkit-scrollbar-thumb:hover {
+        background: #a0aec0;
+    }
+
+    .trending-carousel-item {
+        flex: 0 0 320px;
+        min-width: 320px;
+        max-width: 320px;
+    }
+
+    .trending-carousel-item .cp-article-image {
+        height: 200px;
+    }
+
+    @media (max-width: 768px) {
+        .trending-carousel-item {
+            flex: 0 0 280px;
+            min-width: 280px;
+            max-width: 280px;
+        }
+
+        .trending-carousel-item .cp-article-image {
+            height: 180px;
+        }
+    }
+</style>
+
+<div class="trending-section-wrapper">
+    <div class="trending-carousel-container">
+        <div class="trending-carousel-track" id="trending-track">
+            <!-- Articles will be inserted here -->
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        const track = document.getElementById('trending-track');
+
+        // Wait for TRENDING_ARTICLES to be available
+        function waitForArticles(callback, timeout = 5000) {
+            const startTime = Date.now();
+            const checkInterval = setInterval(() => {
+                if (window.TRENDING_ARTICLES && window.TRENDING_ARTICLES.length > 0) {
+                    clearInterval(checkInterval);
+                    callback();
+                } else if (Date.now() - startTime > timeout) {
+                    clearInterval(checkInterval);
+                    console.error('TRENDING_ARTICLES not found');
+                }
+            }, 50);
+        }
+
+        // Fetch metadata for a single article
+        async function fetchArticleMetadata(url) {
+            try {
+                const response = await fetch(url);
+                const html = await response.text();
+                
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                const getMetaContent = (property) => {
+                    const ogTag = doc.querySelector(`meta[property="${property}"]`);
+                    const nameTag = doc.querySelector(`meta[name="${property}"]`);
+                    return ogTag?.content || nameTag?.content || '';
+                };
+                
+                const title = getMetaContent('og:title') || 
+                             getMetaContent('twitter:title') || 
+                             doc.querySelector('title')?.textContent || 
+                             'Article';
+                
+                const description = getMetaContent('og:description') || 
+                                   getMetaContent('twitter:description') || 
+                                   getMetaContent('description') || 
+                                   '';
+                
+                const image = getMetaContent('og:image') || 
+                             getMetaContent('twitter:image') || 
+                             'https://via.placeholder.com/320x200';
+                
+                // Extract author
+                const authorElement = doc.querySelector('.blog-author-name, [itemprop="author"]');
+                const author = authorElement?.textContent?.trim() || 'Carolina Panorama';
+                
+                // Extract date
+                const dateElement = doc.querySelector('[itemprop="datePublished"], time');
+                const dateStr = dateElement?.getAttribute('datetime') || dateElement?.textContent;
+                const date = dateStr ? new Date(dateStr) : new Date();
+                
+                // Extract categories/tags
+                const categoryElements = doc.querySelectorAll('.blog-category, [rel="category tag"]');
+                const categories = Array.from(categoryElements)
+                    .map(el => el.textContent.trim().replace(/^\|\s*/, '')) // Remove leading pipe
+                    .filter(Boolean);
+                
+                return {
+                    url: url,
+                    title: title,
+                    description: description,
+                    image: image,
+                    author: author,
+                    date: date,
+                    categories: categories.length > 0 ? categories : ['News']
+                };
+            } catch (error) {
+                console.error('Error fetching article metadata:', error);
+                return null;
+            }
+        }
+
+        // Format date as "Month DD, YYYY"
+        function formatDate(date) {
+            const options = { month: 'short', day: 'numeric', year: 'numeric' };
+            return date.toLocaleDateString('en-US', options);
+        }
+
+        // Create article card HTML
+        function createArticleCard(data) {
+            const categoryTag = data.categories[0] || 'News';
+            const categoryClass = categoryTag.toLowerCase().replace(/\s+/g, '-');
+            
+            return `
+                <div class="trending-carousel-item">
+                    <article class="cp-article-card cp-article-card-medium">
+                        <a href="${data.url}" class="cp-article-card-link">
+                            <img src="${data.image}" alt="${data.title}" class="cp-article-image">
+                            <div class="cp-article-content">
+                                <div class="cp-article-tags">
+                                    <span class="cp-article-tag ${categoryClass}">${categoryTag}</span>
+                                </div>
+                                <h3 class="cp-article-title">${data.title}</h3>
+                                <div class="cp-article-meta">
+                                    <span class="cp-article-author">${data.author}</span>
+                                    <span class="cp-article-date">${formatDate(data.date)}</span>
+                                </div>
+                            </div>
+                        </a>
+                    </article>
+                </div>
+            `;
+        }
+
+        // Initialize carousel
+        async function initializeCarousel() {
+            const articles = window.TRENDING_ARTICLES;
+            
+            // Fetch all article data
+            const promises = articles.map(async (articleId) => {
+                const articleUrl = `/post/${articleId}`;
+                return await fetchArticleMetadata(articleUrl);
+            });
+            
+            const articleData = await Promise.all(promises);
+            
+            // Filter out failed fetches and create cards
+            const validArticles = articleData.filter(data => data !== null);
+            const cardsHTML = validArticles.map(data => createArticleCard(data)).join('');
+            
+            track.innerHTML = cardsHTML;
+        }
+
+        // Wait for articles and then initialize
+        waitForArticles(() => {
+            initializeCarousel();
+        });
+    })();
+</script>

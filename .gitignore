@@ -1,0 +1,11 @@
+# Python virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# Dot files
+.DS_Store
+.env
+.*
+!.gitignore
