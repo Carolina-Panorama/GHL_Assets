@@ -98,18 +98,41 @@ h3 {
     text-transform: capitalize;
 }
 
-/* Hijack existing blog tags */
-.blog-tag {
-    display: inline-block !important;
-    background: #3b82f6;
-    color: white;
-    padding: clamp(2px, 0.4vw, 3px) clamp(6px, 0.8vw, 8px) !important;
-    border-radius: 3px !important;
-    font-size: clamp(0.625rem, 0.75vw, 0.7rem) !important;
-    font-weight: 600 !important;
-    text-transform: capitalize !important;
-    margin-right: clamp(4px, 0.6vw, 6px) !important;
+.cp-article-tag.business, .blog-tag.business {
+    background-color: #10b981;
+    color: #fff;
 }
+
+.cp-article-tag.politics, .blog-tag.politics {
+    background-color: #8b5cf6;
+    color: #fff;
+}
+
+.cp-article-tag.sports, .blog-tag.sports {
+    background-color: #73000A;
+    color: #fff;
+}
+
+.cp-article-tag.hbcu, .blog-tag.hbcu {
+    background-color: #003366;
+    color: #fff;
+}
+
+.cp-article-tag.health, .blog-tag.health {
+    background-color: #ec4899;
+    color: #fff;
+}
+
+.cp-article-tag.education, .blog-tag.education {
+    background-color: #06b6d4;
+    color: #fff;
+}
+
+.cp-article-tag.local, .blog-tag.local {
+    background-color: #3b82f6;
+    color: #fff;
+}
+
 
 /* Article Title */
 .cp-article-title {
