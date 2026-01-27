@@ -120,7 +120,7 @@
             return null;
         }
     };
-
+    // proxiedLeadConnectorUrl already present as window.CarolinaPanorama.proxiedLeadConnectorUrl
     /**
      * Fetch articles from backend API and map to metadata objects.
      * @param {Object} params - { limit, offset, categoryUrlSlug }
@@ -130,6 +130,7 @@
         limit = 10,
         offset = 0,
         categoryUrlSlug = null,
+        tag = null,
         locationId = '9Iv8kFcMiUgScXzMPv23',
         blogId = 'iWSdkAQOuuRNrWiAHku1'
     } = {}) {
@@ -140,7 +141,10 @@
             `limit=${encodeURIComponent(limit)}`,
             `offset=${encodeURIComponent(offset)}`
         ];
-        if (categoryUrlSlug) {
+        // Only one of tag or categoryUrlSlug can be used
+        if (tag && !categoryUrlSlug) {
+            params.push(`tag=${encodeURIComponent(tag)}`);
+        } else if (categoryUrlSlug && !tag) {
             params.push(`categoryUrlSlug=${encodeURIComponent(categoryUrlSlug)}`);
         }
         const url = `${baseUrl}?${params.join('&')}`;

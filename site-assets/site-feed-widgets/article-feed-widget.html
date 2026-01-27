@@ -1,0 +1,192 @@
+<!-- Article Feed Widget with Pagination and Filtering -->
+<!-- Include shared-article-card-styles.css in your page -->
+
+<style>
+    .article-feed-wrapper {
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: clamp(12px, 1.6vw, 20px);
+    }
+    .article-feed-container {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+    }
+    .article-feed-pagination {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        margin: 24px 0 0 0;
+    }
+    .article-feed-pagination button {
+        padding: 8px 16px;
+        border: none;
+        background: #3b82f6;
+        color: #fff;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 1rem;
+    }
+    .article-feed-pagination button:disabled {
+        background: #e5e7eb;
+        color: #9ca3af;
+        cursor: not-allowed;
+    }
+</style>
+
+<div class="article-feed-wrapper">
+    <div class="article-feed-container" id="article-feed-container">
+        <!-- Articles will be rendered here -->
+    </div>
+    <div class="article-feed-pagination" id="article-feed-pagination">
+        <!-- Pagination buttons will be rendered here -->
+    </div>
+</div>
+
+<script>
+// Wait for CarolinaPanorama global before running widget logic
+function waitForCarolinaPanorama(callback, timeout = 5000) {
+    const start = Date.now();
+    (function check() {
+        if (window.CarolinaPanorama) {
+            callback();
+        } else if (Date.now() - start < timeout) {
+            setTimeout(check, 30);
+        } else {
+            console.error('CarolinaPanorama global not found.');
+        }
+    })();
+}
+
+waitForCarolinaPanorama(function() {
+    const container = document.getElementById('article-feed-container');
+    const pagination = document.getElementById('article-feed-pagination');
+    const ARTICLES_PER_PAGE = 10;
+    let currentPage = 1;
+    let totalCount = 0;
+    let currentFilter = {};
+
+    // Utility to get filter from URL (category or tag)
+    function getFilterFromUrl() {
+        const path = window.location.pathname;
+        const matchCategory = path.match(/\/category\/([^\/]+)/);
+        const matchTag = path.match(/\/tag\/([^\/]+)/);
+        if (matchCategory) {
+            return { categoryUrlSlug: matchCategory[1] };
+        } else if (matchTag) {
+            return { tag: matchTag[1] };
+        }
+        return {};
+    }
+
+    // Fetch articles for current page and filter
+    async function fetchArticles(page = 1) {
+        currentFilter = getFilterFromUrl();
+        const offset = (page - 1) * ARTICLES_PER_PAGE;
+        const params = Object.assign({
+            limit: ARTICLES_PER_PAGE,
+            offset: offset
+        }, currentFilter);
+        // Fetch raw response to get count
+        const baseUrl = 'https://backend.leadconnectorhq.com/blogs/posts/list';
+        const urlParams = [
+            `locationId=9Iv8kFcMiUgScXzMPv23`,
+            `blogId=iWSdkAQOuuRNrWiAHku1`,
+            `limit=${ARTICLES_PER_PAGE}`,
+            `offset=${offset}`
+        ];
+        if (params.categoryUrlSlug) urlParams.push(`categoryUrlSlug=${encodeURIComponent(params.categoryUrlSlug)}`);
+        if (params.tag) urlParams.push(`tag=${encodeURIComponent(params.tag)}`);
+        const url = `${baseUrl}?${urlParams.join('&')}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        totalCount = data.count || 0;
+        return (data.blogPosts || []).map(post => ({
+            url: post.canonicalLink,
+            title: post.title,
+            description: post.description,
+            image: post.imageUrl,
+            author: post.author?.name || 'Unknown',
+            date: post.publishedAt,
+            categories: Array.isArray(post.categories) && post.categories.length > 0
+                ? post.categories.map(cat => cat.label)
+                : ['News']
+        }));
+    }
+
+    // Render articles
+    function renderArticles(articles) {
+        if (!articles || articles.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #666;">No articles found.</p>';
+            return;
+        }
+        const cardsHTML = articles.map(data => createArticleCard(data)).join('');
+        container.innerHTML = cardsHTML;
+    }
+
+    // Render pagination
+    function renderPagination(page, total) {
+        const prevDisabled = page === 1;
+        const nextDisabled = total <= page * ARTICLES_PER_PAGE;
+        const totalPages = Math.ceil(total / ARTICLES_PER_PAGE);
+        pagination.innerHTML = `
+            <button id="feed-prev" ${prevDisabled ? 'disabled' : ''}>Previous</button>
+            <span>Page ${page} of ${totalPages}</span>
+            <button id="feed-next" ${nextDisabled ? 'disabled' : ''}>Next</button>
+        `;
+        document.getElementById('feed-prev').onclick = function() {
+            if (!prevDisabled) changePage(page - 1);
+        };
+        document.getElementById('feed-next').onclick = function() {
+            if (!nextDisabled) changePage(page + 1);
+        };
+    }
+
+    // Create article card HTML
+    function createArticleCard(data) {
+        const categoryTags = data.categories.slice(0, 2).map(cat => {
+            const categoryClass = cat.toLowerCase().replace(/\s+/g, '-');
+            return `<span class="cp-article-tag ${categoryClass}">${cat}</span>`;
+        }).join('');
+        const proxied = window.CarolinaPanorama.proxiedLeadConnectorUrl(data.image, 800);
+        return `
+            <div class="article-list-item">
+                <article class="cp-article-card">
+                    <a href="${data.url}" class="cp-article-card-link">
+                        <img src="${proxied || data.image}" alt="${data.title}" class="cp-article-image">
+                        <div class="cp-article-content">
+                            <h2 class="cp-article-title">${data.title}</h2>
+                            <div class="cp-article-meta">
+                                <span class="cp-article-author">${data.author}</span>
+                                <span class="cp-article-date">${formatDate(data.date)}</span>
+                            </div>
+                            <p class="cp-article-description">${data.description}</p>
+                            <div class="cp-article-tags">
+                                ${categoryTags}
+                            </div>
+                            <span class="cp-article-read-more">Read More</span>
+                        </div>
+                    </a>
+                </article>
+            </div>
+        `;
+    }
+
+    function formatDate(date) {
+        const options = { month: 'numeric', day: 'numeric', year: 'numeric' };
+        return 'Published on: ' + new Date(date).toLocaleDateString('en-US', options);
+    }
+
+    // Change page
+    async function changePage(page) {
+        currentPage = page;
+        const articles = await fetchArticles(page);
+        renderArticles(articles);
+        renderPagination(page, totalCount);
+    }
+
+    // Initial load
+    changePage(1);
+});
+</script>
