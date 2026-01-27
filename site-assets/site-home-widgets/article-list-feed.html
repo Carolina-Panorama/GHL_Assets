@@ -136,71 +136,81 @@
 </div>
 
 <script>
-    (function() {
-        const container = document.getElementById('article-list-container');
-
-        // Configuration
-        const RSS_FEED_URL = 'https://rss-link.com/feed/9Iv8kFcMiUgScXzMPv23?blogId=iWSdkAQOuuRNrWiAHku1&limit=50&loadContent=false';
-        const MAX_ARTICLES = 10; // Number of articles to display
-
-        // Fetch latest articles from backend
-        async function fetchLatestArticles() {
-            // You can add categoryUrlSlug if needed
-            return await window.CarolinaPanorama.fetchArticlesFromBackend({ limit: MAX_ARTICLES });
+// Wait for CarolinaPanorama global before running widget logic
+function waitForCarolinaPanorama(callback, timeout = 5000) {
+    const start = Date.now();
+    (function check() {
+        if (window.CarolinaPanorama) {
+            callback();
+        } else if (Date.now() - start < timeout) {
+            setTimeout(check, 30);
+        } else {
+            console.error('CarolinaPanorama global not found.');
         }
-
-        // Use global CarolinaPanorama helpers
-        const fetchArticleMetadata = window.CarolinaPanorama.fetchArticleMetadata;
-        const proxiedLeadConnectorUrl = window.CarolinaPanorama.proxiedLeadConnectorUrl;
-        function formatDate(date) {
-            const options = { month: 'numeric', day: 'numeric', year: 'numeric' };
-            return 'Published on: ' + new Date(date).toLocaleDateString('en-US', options);
-        }
-
-        // Create article card HTML
-        function createArticleCard(data) {
-            const categoryTags = data.categories.slice(0, 2).map(cat => {
-                const categoryClass = cat.toLowerCase().replace(/\s+/g, '-');
-                return `<span class="cp-article-tag ${categoryClass}">${cat}</span>`;
-            }).join('');
-            const proxied = proxiedLeadConnectorUrl(data.image, 800);
-            
-            return `
-                <div class="article-list-item">
-                    <article class="cp-article-card">
-                        <a href="${data.url}" class="cp-article-card-link">
-                            <img src="${proxied || data.image}" alt="${data.title}" class="cp-article-image">
-                            <div class="cp-article-content">
-                                <h2 class="cp-article-title">${data.title}</h2>
-                                <div class="cp-article-meta">
-                                    <span class="cp-article-author">${data.author}</span>
-                                    <span class="cp-article-date">${formatDate(data.date)}</span>
-                                </div>
-                                <p class="cp-article-description">${data.description}</p>
-                                <div class="cp-article-tags">
-                                    ${categoryTags}
-                                </div>
-                                <span class="cp-article-read-more">Read More</span>
-                            </div>
-                        </a>
-                    </article>
-                </div>
-            `;
-        }
-
-        // Initialize feed
-        async function initializeFeed() {
-            // Fetch latest articles from backend
-            const articles = await fetchLatestArticles();
-            if (!articles || articles.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #666;">No articles found.</p>';
-                return;
-            }
-            const cardsHTML = articles.map(data => createArticleCard(data)).join('');
-            container.innerHTML = cardsHTML;
-        }
-
-        // Initialize on page load
-        initializeFeed();
     })();
+}
+
+waitForCarolinaPanorama(function() {
+    const container = document.getElementById('article-list-container');
+    const MAX_ARTICLES = 10; // Number of articles to display
+
+    // Fetch latest articles from backend
+    async function fetchLatestArticles() {
+        // You can add categoryUrlSlug if needed
+        return await window.CarolinaPanorama.fetchArticlesFromBackend({ limit: MAX_ARTICLES });
+    }
+
+    // Use global CarolinaPanorama helpers
+    const fetchArticleMetadata = window.CarolinaPanorama.fetchArticleMetadata;
+    const proxiedLeadConnectorUrl = window.CarolinaPanorama.proxiedLeadConnectorUrl;
+    function formatDate(date) {
+        const options = { month: 'numeric', day: 'numeric', year: 'numeric' };
+        return 'Published on: ' + new Date(date).toLocaleDateString('en-US', options);
+    }
+
+    // Create article card HTML
+    function createArticleCard(data) {
+        const categoryTags = data.categories.slice(0, 2).map(cat => {
+            const categoryClass = cat.toLowerCase().replace(/\s+/g, '-');
+            return `<span class="cp-article-tag ${categoryClass}">${cat}</span>`;
+        }).join('');
+        const proxied = proxiedLeadConnectorUrl(data.image, 800);
+        return `
+            <div class="article-list-item">
+                <article class="cp-article-card">
+                    <a href="${data.url}" class="cp-article-card-link">
+                        <img src="${proxied || data.image}" alt="${data.title}" class="cp-article-image">
+                        <div class="cp-article-content">
+                            <h2 class="cp-article-title">${data.title}</h2>
+                            <div class="cp-article-meta">
+                                <span class="cp-article-author">${data.author}</span>
+                                <span class="cp-article-date">${formatDate(data.date)}</span>
+                            </div>
+                            <p class="cp-article-description">${data.description}</p>
+                            <div class="cp-article-tags">
+                                ${categoryTags}
+                            </div>
+                            <span class="cp-article-read-more">Read More</span>
+                        </div>
+                    </a>
+                </article>
+            </div>
+        `;
+    }
+
+    // Initialize feed
+    async function initializeFeed() {
+        // Fetch latest articles from backend
+        const articles = await fetchLatestArticles();
+        if (!articles || articles.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #666;">No articles found.</p>';
+            return;
+        }
+        const cardsHTML = articles.map(data => createArticleCard(data)).join('');
+        container.innerHTML = cardsHTML;
+    }
+
+    // Initialize on page load
+    initializeFeed();
+});
 </script>

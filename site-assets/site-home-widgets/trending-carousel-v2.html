@@ -93,7 +93,21 @@
 </div>
 
     <script>
-    (function() {
+    // Wait for CarolinaPanorama global before running widget logic
+    function waitForCarolinaPanorama(callback, timeout = 5000) {
+        const start = Date.now();
+        (function check() {
+            if (window.CarolinaPanorama) {
+                callback();
+            } else if (Date.now() - start < timeout) {
+                setTimeout(check, 30);
+            } else {
+                console.error('CarolinaPanorama global not found.');
+            }
+        })();
+    }
+
+    waitForCarolinaPanorama(function() {
         const track = document.getElementById('trending-track');
 
         // Read GHL custom value (comma-separated list) and populate window.TRENDING_ARTICLES
@@ -103,7 +117,6 @@
                 if (!el) return;
                 const raw = (el.textContent || '').trim();
                 if (!raw) return;
-
                 // Expecting comma-separated list like: id1,id2,id3
                 const items = raw.split(/,|\r?\n/).map(s => s.trim()).filter(Boolean);
                 if (items.length) {
@@ -141,7 +154,6 @@
             const categoryTag = data.categories[0] || 'News';
             const categoryClass = categoryTag.toLowerCase().replace(/\s+/g, '-');
             const proxied = proxiedLeadConnectorUrl(data.image, 600);
-            
             return `
                 <div class="trending-carousel-item">
                     <article class="cp-article-card cp-article-card-medium">
@@ -166,19 +178,15 @@
         // Initialize carousel
         async function initializeCarousel() {
             const articles = window.TRENDING_ARTICLES;
-            
             // Fetch all article data
             const promises = articles.map(async (articleId) => {
                 const articleUrl = `/post/${articleId}`;
                 return await fetchArticleMetadata(articleUrl);
             });
-            
             const articleData = await Promise.all(promises);
-            
             // Filter out failed fetches and create cards
             const validArticles = articleData.filter(data => data !== null);
             const cardsHTML = validArticles.map(data => createArticleCard(data)).join('');
-            
             track.innerHTML = cardsHTML;
         }
 
@@ -186,5 +194,6 @@
         waitForArticles(() => {
             initializeCarousel();
         });
-    })();
+    });
+    </script>
 </script>
