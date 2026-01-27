@@ -111,32 +111,6 @@ h3 {
     margin-right: clamp(4px, 0.6vw, 6px) !important;
 }
 
-/* Color variations for both tag types */
-.cp-article-tag.business,
-.blog-tag:contains("Business") {
-    background: #10b981 !important;
-}
-
-.cp-article-tag.politics,
-.blog-tag:contains("Politics") {
-    background: #8b5cf6 !important;
-}
-
-.cp-article-tag.sports,
-.blog-tag:contains("Sports") {
-    background: #f59e0b !important;
-}
-
-.cp-article-tag.education,
-.blog-tag:contains("Education") {
-    background: #06b6d4 !important;
-}
-
-.cp-article-tag.health,
-.blog-tag:contains("Health") {
-    background: #ec4899 !important;
-}
-
 /* Article Title */
 .cp-article-title {
     font-weight: 600;
