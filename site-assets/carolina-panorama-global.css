@@ -101,8 +101,8 @@ h3 {
 /* Hijack existing blog tags */
 .blog-tag {
     display: inline-block !important;
-    background: #3b82f6 !important;
-    color: white !important;
+    background: #3b82f6;
+    color: white;
     padding: clamp(2px, 0.4vw, 3px) clamp(6px, 0.8vw, 8px) !important;
     border-radius: 3px !important;
     font-size: clamp(0.625rem, 0.75vw, 0.7rem) !important;
