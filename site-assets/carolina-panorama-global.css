@@ -55,6 +55,11 @@ h3 {
     background: #f7fafc;
 }
 
+.cp-article-image.is-loading {
+  visibility: hidden;
+}
+
+
 /* Article Content Container */
 .cp-article-content {
     padding: clamp(8px, 1.2vw, 12px);

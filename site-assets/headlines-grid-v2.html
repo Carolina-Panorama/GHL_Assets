@@ -382,10 +382,15 @@
             linkElement.href = data.url;
 
             const image = linkElement.querySelector('.cp-article-image');
+            image.classList.add('is-loading');
             // Choose proxy width based on position (featured larger)
             const idx = parseInt(linkElement.getAttribute('data-article-index'), 10);
             const proxyWidth = idx === 0 ? 1200 : 600;
             const proxied = proxiedLeadConnectorUrl(data.image, proxyWidth);
+
+             image.addEventListener('load', () => {
+                image.classList.remove('is-loading');
+            }, { once: true })
             image.src = proxied || data.image;
             image.alt = data.title;
             
