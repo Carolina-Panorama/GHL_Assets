@@ -162,7 +162,8 @@
                 const author = authorElement?.textContent?.trim() || 'Carolina Panorama';
                 
                 // Extract date - prioritize article:published_time meta tag
-                let dateStr = doc.querySelector('meta[property="article:published_time"]')?.getAttribute('content');
+                //let dateStr = doc.querySelector('meta[property="article:published_time"]')?.getAttribute('content');
+                let dateStr = doc.querySelector('.blog-date')?.textContent?.trim();
                 if (!dateStr) {
                     const dateElement = doc.querySelector('[itemprop="datePublished"], time');
                     dateStr = dateElement?.getAttribute('datetime') || dateElement?.textContent;
