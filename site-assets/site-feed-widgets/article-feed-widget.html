@@ -178,7 +178,7 @@ waitForCarolinaPanorama(function() {
         const data = await response.json();
         totalCount = data.count || 0;
         return (data.blogPosts || []).map(post => ({
-            url: post.canonicalLink,
+            url: post.canonicalLink || (post.urlSlug ? `/post/${post.urlSlug}` : ''),
             title: post.title,
             description: post.description,
             image: post.imageUrl,
