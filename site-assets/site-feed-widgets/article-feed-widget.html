@@ -129,6 +129,7 @@
 </style>
 
 <div class="article-list-feed-wrapper">
+    <div id="current-category-label" style="text-align:center;font-size:1.5rem;font-weight:700;margin-bottom:18px;"></div>
     <div class="article-list-container" id="article-feed-container">
         <!-- Articles will be rendered here -->
     </div>
@@ -155,6 +156,7 @@ function waitForCarolinaPanorama(callback, timeout = 5000) {
 waitForCarolinaPanorama(function() {
     const container = document.getElementById('article-feed-container');
     const pagination = document.getElementById('article-feed-pagination');
+    const categoryLabelDiv = document.getElementById('current-category-label');
     const ARTICLES_PER_PAGE = 10;
     let currentPage = 1;
     let totalCount = 0;
@@ -195,7 +197,8 @@ waitForCarolinaPanorama(function() {
         const response = await fetch(url);
         const data = await response.json();
         totalCount = data.count || 0;
-        return (data.blogPosts || []).map(post => ({
+        return {
+          articles: (data.blogPosts || []).map(post => ({
             url: post.canonicalLink || (post.urlSlug ? `/post/${post.urlSlug}` : ''),
             title: post.title,
             description: post.description,
@@ -205,7 +208,9 @@ waitForCarolinaPanorama(function() {
             categories: Array.isArray(post.categories) && post.categories.length > 0
                 ? post.categories.map(cat => cat.label)
                 : ['News']
-        }));
+          })),
+          categoryDetails: data.categoryDetails || null
+        };
     }
 
     // Render articles
@@ -274,9 +279,15 @@ waitForCarolinaPanorama(function() {
     // Change page
     async function changePage(page) {
         currentPage = page;
-        const articles = await fetchArticles(page);
+        const { articles, categoryDetails } = await fetchArticles(page);
         renderArticles(articles);
         renderPagination(page, totalCount);
+        // Render category label if present in response
+        if (categoryDetails && categoryDetails.label) {
+            categoryLabelDiv.textContent = categoryDetails.label;
+        } else {
+            categoryLabelDiv.textContent = '';
+        }
     }
 
     // Initial load

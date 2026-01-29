@@ -1,0 +1,110 @@
+<!-- Category Grid Widget -->
+<style>
+.category-grid-widget {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: clamp(12px, 1.6vw, 20px);
+}
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: 16px;
+}
+.category-grid-item {
+  background: #dbeafe;
+  border-radius: 12px;
+  padding: 24px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1e2761;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
+}
+.category-grid-item:hover {
+  background: #003366;
+  color: #fff;
+}
+@media (max-width: 700px) {
+  .category-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 480px) {
+  .category-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+<div class="category-grid-widget">
+  <div class="category-grid" id="category-grid-list">
+    <!-- Categories will be loaded here -->
+  </div>
+</div>
+<script>
+function waitForLibrariesAndInitCategoryGrid(callback, timeout = 10000) {
+  const start = Date.now();
+  (function poll() {
+    // Example: wait for window.CarolinaPanorama or any other global
+    if (window.CarolinaPanorama) {
+      callback();
+    } else if (Date.now() - start < timeout) {
+      setTimeout(poll, 30);
+    } else {
+      console.error('Required libraries not found for category grid widget.');
+    }
+  })();
+}
+
+async function fetchCategories() {
+  const baseUrl = 'https://backend.leadconnectorhq.com/blogs/categories?locationId=9Iv8kFcMiUgScXzMPv23';
+  const limit = 10;
+  let offset = 0;
+  let allCategories = [];
+  let seen = new Set();
+  let totalCount = null;
+  do {
+    const url = `${baseUrl}&limit=${limit}&offset=${offset}`;
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      if (totalCount === null) totalCount = data.count || 0;
+      const newCats = (data.categories || []).filter(cat => {
+        if (!cat.urlSlug || seen.has(cat.urlSlug)) return false;
+        seen.add(cat.urlSlug);
+        return true;
+      });
+      allCategories = allCategories.concat(newCats);
+      offset += limit;
+      if (allCategories.length >= totalCount) break;
+    } catch (e) {
+      console.error('Failed to fetch categories:', e);
+      break;
+    }
+  } while (allCategories.length < (totalCount || 0));
+  return allCategories;
+}
+
+function renderCategoryGrid(categories) {
+  const grid = document.getElementById('category-grid-list');
+  if (!grid) return;
+  grid.innerHTML = '';
+  categories.forEach(cat => {
+    const a = document.createElement('a');
+    a.className = 'category-grid-item';
+    a.href = `https://carolinapanorama.com/article-feed/category/${cat.urlSlug}`;
+    a.textContent = cat.label;
+    a.setAttribute('tabindex', '0');
+    grid.appendChild(a);
+  });
+}
+
+waitForLibrariesAndInitCategoryGrid(async function() {
+  const categories = await fetchCategories();
+  renderCategoryGrid(categories);
+});
+</script>
