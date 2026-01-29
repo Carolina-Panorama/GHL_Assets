@@ -314,17 +314,32 @@ waitForCarolinaPanorama(function() {
     // Change page
     async function changePage(page) {
         currentPage = page;
-        const { articles, categoryDetails } = await fetchArticles(page);
+        const { articles, categoryDetails, authorDetails } = await fetchArticles(page);
         renderArticles(articles);
         renderPagination(page, totalCount);
-        // Render category label if present in response
+        // Build header label
+        let header = '';
         if (categoryDetails && categoryDetails.label) {
-            categoryLabelDiv.textContent = categoryDetails.label;
-            categoryLabelDiv.style.display = '';
-        } else {
-            categoryLabelDiv.textContent = 'Latest Articles';
-            categoryLabelDiv.style.display = '';
+            header = `Category: ${categoryDetails.label}`;
         }
+        // If tag filter is present in URL, show it
+        const filter = getFilterFromUrl();
+        if (filter.tag) {
+            if (header) header += ' | ';
+            header += `Tag: ${filter.tag}`;
+        }
+        // If author filter is present, show author name from authorDetails
+        if (filter.author) {
+            let authorName = 'Unknown Author';
+            if (authorDetails && authorDetails.name) {
+                authorName = authorDetails.name;
+            }
+            if (header) header += ' | ';
+            header += `Author: ${authorName}`;
+        }
+        if (!header) header = 'Latest Articles';
+        categoryLabelDiv.textContent = header;
+        categoryLabelDiv.style.display = '';
     }
 
     // Initial load
