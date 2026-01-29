@@ -64,6 +64,7 @@ def extract_entities(text, top_n=5):
         print(f"    ⚠ Entity extraction failed: {e}")
         return keyword_fallback(text, top_n)
 
+
 # Simple keyword extraction fallback
 import re
 def keyword_fallback(text, top_n=5):
@@ -80,3 +81,65 @@ def keyword_fallback(text, top_n=5):
     # Only include keywords that occur more than once
     top_keywords = [kw for kw, c in counts.most_common() if c > 1][:top_n]
     return ', '.join(top_keywords[:5])
+
+# --- CATEGORY SUGGESTION ---
+
+PREDEFINED_CATEGORIES = [
+    "Business", 
+    "Politics", 
+    "Sports",
+    "HBCUs",
+    "Health",
+    "Education",
+    "Technology",
+    "Local News",
+    "Finance",
+    "Obituaries",
+    "Travel",
+    "Lifestyle",
+    "Culture",
+    "Faith"
+]
+
+def suggest_categories(text, max_categories=2):
+    """
+    Suggest 1-2 categories from PREDEFINED_CATEGORIES based on keyword/entity overlap with article text.
+    Uses Hugging Face zero-shot-classification as a fallback if available.
+    Returns a comma-separated string of categories.
+    """
+    if not text:
+        return ''
+    # Use extracted entities and keywords
+    entities = extract_entities(text, top_n=10)
+    entity_set = set([e.strip().lower() for e in entities.split(',') if e.strip()])
+    matched = []
+    # Simple: match if any entity/keyword is in category name or vice versa
+    for cat in PREDEFINED_CATEGORIES:
+        cat_l = cat.lower()
+        for ent in entity_set:
+            if cat_l in ent or ent in cat_l:
+                matched.append(cat)
+                break
+    # If not enough matches, try keyword presence in text
+    if not matched:
+        for cat in PREDEFINED_CATEGORIES:
+            if cat.lower() in text.lower():
+                matched.append(cat)
+    # If still not enough, try zero-shot-classification
+    if not matched:
+        try:
+            from transformers import pipeline
+            classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+            result = classifier(text, PREDEFINED_CATEGORIES)
+            # result['labels'] is sorted by score descending
+            matched = result['labels'][:max_categories]
+            print(f"    (zero-shot) Category scores: {list(zip(result['labels'], [round(s,3) for s in result['scores']]))}")
+        except ImportError:
+            print("⚠ transformers not installed. Install with: pip install transformers torch")
+        except Exception as e:
+            print(f"⚠ zero-shot-classification failed: {e}")
+    # If still not enough, just pick the first categories
+    if not matched:
+        matched = PREDEFINED_CATEGORIES[:max_categories]
+    # Limit to max_categories
+    return ', '.join(matched[:max_categories])

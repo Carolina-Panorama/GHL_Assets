@@ -197,10 +197,14 @@ waitForCarolinaPanorama(function() {
         const path = window.location.pathname;
         const matchCategory = path.match(/\/category\/([^\/]+)/);
         const matchTag = path.match(/\/tag\/([^\/]+)/);
+        const matchAuthor = path.match(/\/author\/([^\/]+)/);
         if (matchCategory) {
-            return { categoryUrlSlug: matchCategory[1] };
+            return { categoryUrlSlug: decodeURIComponent(matchCategory[1].replace(/\+/g, ' ')) };
         } else if (matchTag) {
-            return { tag: matchTag[1] };
+            // Tags may have spaces encoded as %20 or +
+            return { tag: decodeURIComponent(matchTag[1].replace(/\+/g, ' ')) };
+        } else if (matchAuthor) {
+            return { author: decodeURIComponent(matchAuthor[1].replace(/\+/g, ' ')) };
         }
         return {};
     }
@@ -223,6 +227,7 @@ waitForCarolinaPanorama(function() {
         ];
         if (params.categoryUrlSlug) urlParams.push(`categoryUrlSlug=${encodeURIComponent(params.categoryUrlSlug)}`);
         if (params.tag) urlParams.push(`tag=${encodeURIComponent(params.tag)}`);
+        if (params.author) urlParams.push(`author=${encodeURIComponent(params.author)}`);
         const url = `${baseUrl}?${urlParams.join('&')}`;
         const response = await fetch(url);
         const data = await response.json();

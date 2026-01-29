@@ -97,19 +97,21 @@
         text-transform: capitalize;
     }
 
+
     .cp-article-tag.business  { background-color: #10b981 !important; }
     .cp-article-tag.politics  { background-color: #8b5cf6 !important; }
-    .cp-article-tag.sports    { background-color: #73000A !important; }
-    .cp-article-tag.hbcu      { background-color: #003366 !important; }
+    .cp-article-tag.sports    { background-color: #ac7f0f !important; }
+    .cp-article-tag.hbcus     { background-color: #73000a!important; }
     .cp-article-tag.health    { background-color: #cd4589 !important; }
     .cp-article-tag.education { background-color: #06b6d4 !important; }
-    .cp-article-tag.technology{ background-color: #b8860b !important; }
+    .cp-article-tag.technology{ background-color: #333333 !important; }
     .cp-article-tag.local     { background-color: #3b82f6 !important; }
     .cp-article-tag.finance   { background-color: #047857 !important; }
     .cp-article-tag.obituaries{ background-color: #4A0E4E !important; }
     .cp-article-tag.travel    { background-color: #0e7490 !important; }
     .cp-article-tag.lifestyle { background-color: #f97316 !important; }
-    .cp-article-tag.culture   { background-color: #ef4444 !important; }
+    .cp-article-tag.culture   { background-color: #a502a8 !important; }
+    .cp-article-tag.faith     { background-color: #1E40AF !important; }
 
 
 
@@ -228,6 +230,7 @@
     }
 
 </style>
+
 
 <script>
     /**
@@ -406,4 +409,17 @@
         console.log('Carolina Panorama Global JS loaded');
     })();
 
+    // Wait for Broadstreet JS library to load, then insert the ad zone
+    (function loadBroadstreetAndSignalReady() {
+    var bsScript = document.createElement('script');
+    bsScript.src = 'https://cdn.broadstreetads.com/init-2.min.js';
+    bsScript.onload = function() {
+        if (window.broadstreet) {
+        console.log('Broadstreet ads library loaded and ready.');
+        broadstreet.watch({ networkId: 10001 });
+        document.dispatchEvent(new Event('broadstreet:ready'));
+        }
+    };
+    document.head.appendChild(bsScript);
+    })();   
 </script>

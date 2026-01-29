@@ -16,6 +16,7 @@ from docx import Document
 from datetime import datetime, timedelta
 from collections import Counter
 import ghl_api
+from entity_extraction import suggest_categories
 
 # Try to import spaCy for entity extraction (optional)
 try:
@@ -273,10 +274,18 @@ def process_directory(input_dir, output_csv, ghl_parent_id=None, category_value=
                 'Meta Image': featured_image,
                 'Meta Image Alt text': title,
                 'Author': (extracted_author if extracted_author else (author_value or '')),
-                'Category ': category_value or '',
+                'Category': '',  # Will set below
                 'Blog Post Tags': entity_tags,
                 'Blog Post Content': html_content
             }
+            # If no category_value, suggest categories from article text
+            cat_values = [category_value] if category_value else []
+            if len(cat_value) < 2:
+                cat_sugget = suggest_categories(full_text, max_categories=2-len(cat_value))
+                if cat_sugget:
+                    print(f"  - Suggested categories: {cat_value}")
+                    cat_values.append(cat_sugget)
+            article['Category'] = str(cat_values) or ""
             articles.append(article)
     finally:
         pass
