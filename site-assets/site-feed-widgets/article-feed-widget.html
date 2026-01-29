@@ -336,7 +336,7 @@ waitForCarolinaPanorama(function() {
             if (authorDetails && authorDetails.name) {
                 authorName = authorDetails.name;
             }
-            header = `Author: ${authorDetails.label}`;
+            header = `Author: ${authorName}`;
         }
         if (!header) header = 'Latest Articles';
         categoryLabelDiv.textContent = header;
