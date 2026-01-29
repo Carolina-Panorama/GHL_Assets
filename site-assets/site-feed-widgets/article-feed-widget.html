@@ -332,10 +332,10 @@ waitForCarolinaPanorama(function() {
         // If author filter is present, show author name from authorDetails
         if (filter.author) {
             let authorName = 'Unknown Author';
+            console.log('authorDetails:', authorDetails);
             if (authorDetails && authorDetails.name) {
                 authorName = authorDetails.name;
             }
-            if (header) header += ' | ';
             header = `Author: ${authorDetails.label}`;
         }
         if (!header) header = 'Latest Articles';
