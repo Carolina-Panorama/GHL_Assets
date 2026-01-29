@@ -1,0 +1,163 @@
+<!-- Featured Player + Episode List (No API Key Required) -->
+<style>
+.yt-featured-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.yt-featured-player {
+  flex: 1 1 640px;
+  min-width: 320px;
+  max-width: 800px;
+  background: #e0e7ef;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(30,41,59,0.07);
+  padding: 24px 24px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: box-shadow 0.2s;
+}
+.yt-featured-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 20px 0 0 0;
+  text-align: center;
+  color: #1e293b;
+}
+.yt-episode-list {
+  flex: 0 0 300px;
+  min-width: 220px;
+  max-width: 320px;
+  background: #e0e7ef;
+  border-radius: 18px;
+  padding: 20px 10px 20px 10px;
+  box-shadow: 0 4px 24px rgba(30,41,59,0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: fit-content;
+  transition: box-shadow 0.2s;
+}
+.yt-episode-list h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  text-align: center;
+  color: #1e293b;
+}
+.yt-episode-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  border: none;
+  text-align: left;
+  padding: 10px 10px;
+  border-radius: 10px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+  color: #1e293b;
+  width: 100%;
+  outline: none;
+  box-shadow: 0 1px 4px rgba(30,41,59,0.04);
+}
+.yt-episode-btn.active,
+.yt-episode-btn:hover {
+  background: #2563eb;
+  color: #fff;
+}
+.yt-episode-thumb {
+  width: 56px;
+  height: 42px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #e5e7eb;
+  box-shadow: 0 2px 8px rgba(30,41,59,0.06);
+}
+.yt-episode-title {
+  flex: 1;
+  font-size: 1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+</style>
+
+<div class="yt-featured-wrapper">
+  <div class="yt-featured-player" id="yt-featured-player">
+    <!-- Featured player and title will be injected here -->
+  </div>
+  <div class="yt-episode-list" id="yt-episode-list">
+    <h3>Episodes</h3>
+    <!-- Episode list will be injected here -->
+  </div>
+</div>
+
+<script>
+// List your YouTube video IDs here (in order, most recent first)
+const YT_VIDEO_IDS = [
+  'ZLFZBqLRB6I',
+  'ickkNfCrB1Y',
+  // Add more video IDs as needed
+];
+
+let videoData = YT_VIDEO_IDS.map(id => ({ id, title: 'Loading...', thumb: '', url: `https://www.youtube.com/watch?v=${id}` }));
+
+function fetchVideoData() {
+  videoData.forEach((v, i) => {
+    fetch(`https://noembed.com/embed?url=${encodeURIComponent(v.url)}`)
+      .then(r => r.json())
+      .then(data => {
+        videoData[i].title = data.title || `Episode ${i+1}`;
+        videoData[i].thumb = data.thumbnail_url || '';
+        renderEpisodeList();
+        if (i === current) renderFeatured();
+      })
+      .catch(() => {
+        videoData[i].title = `Episode ${i+1}`;
+        renderEpisodeList();
+      });
+  });
+}
+
+const featured = document.getElementById('yt-featured-player');
+const episodeList = document.getElementById('yt-episode-list');
+let current = 0;
+
+function renderFeatured() {
+  const v = videoData[current];
+  featured.innerHTML = `
+    <div style="position:relative;height:0;padding-bottom:56.28%;width:100%;max-width:720px;">
+      <iframe src="https://www.youtube.com/embed/${v.id}" style="position:absolute;width:100%;height:100%;left:0" width="640" height="360" frameborder="0" allowfullscreen></iframe>
+    </div>
+    <div class="yt-featured-title">${v.title}</div>
+  `;
+}
+
+function renderEpisodeList() {
+  // Remove all except the heading
+  episodeList.querySelectorAll('button').forEach(el => el.remove());
+  videoData.forEach((v, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'yt-episode-btn' + (i === current ? ' active' : '');
+    btn.onclick = function() {
+      current = i;
+      renderFeatured();
+      renderEpisodeList();
+    };
+    btn.innerHTML = `
+      <img class="yt-episode-thumb" src="${v.thumb}" alt="" loading="lazy">
+      <span class="yt-episode-title">${v.title}</span>
+    `;
+    episodeList.appendChild(btn);
+  });
+}
+
+fetchVideoData();
+renderFeatured();
+renderEpisodeList();
+</script>

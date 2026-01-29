@@ -52,6 +52,40 @@
         return url;
     };
 
+    // Article image fallback: replace broken/missing images with a styled placeholder
+    (function() {
+    function createImgPlaceholder(alt) {
+        const div = document.createElement('div');
+        div.className = 'img-placeholder';
+        div.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="18" height="18" rx="4" fill="#e2e8f0"/><path d="M8 13l2.5 3.5L15 11l4 6H5l3-4z" fill="#94a3b8"/></svg>
+        <span>No Image</span>
+        `;
+        if (alt) div.title = alt;
+        return div;
+    }
+    function handleImgError(e) {
+        const img = e.target;
+        if (!img.classList.contains('img-placeholder')) {
+        const alt = img.alt || '';
+        const ph = createImgPlaceholder(alt);
+        ph.style.width = img.width ? img.width + 'px' : '';
+        ph.style.height = img.height ? img.height + 'px' : '';
+        img.replaceWith(ph);
+        }
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('img.cp-article-image').forEach(img => {
+        img.addEventListener('error', handleImgError);
+        // If already broken (cached 404), trigger error
+        if (!img.complete || img.naturalWidth === 0) {
+            handleImgError({ target: img });
+        }
+        });
+    });
+    })();
+
+
     window.CarolinaPanorama.proxiedLeadConnectorUrl = function(originalUrl, width = 1200) {
         if (!originalUrl) return originalUrl;
         const normalized = window.CarolinaPanorama.normalizeUrl(originalUrl);
@@ -89,7 +123,7 @@
 
             const image = getMetaContent('og:image') ||
                 getMetaContent('twitter:image') ||
-                'https://via.placeholder.com/400x200';
+                '
 
             const authorElement = doc.querySelector('.blog-author-name, [itemprop="author"]');
             const author = authorElement?.textContent?.trim() || 'Carolina Panorama';
@@ -120,6 +154,7 @@
             return null;
         }
     };
+
     // proxiedLeadConnectorUrl already present as window.CarolinaPanorama.proxiedLeadConnectorUrl
     /**
      * Fetch articles from backend API and map to metadata objects.
@@ -156,7 +191,7 @@
             const data = await response.json();
             if (!data.blogPosts || !Array.isArray(data.blogPosts)) return [];
             return data.blogPosts.map(post => ({
-                url: post.canonicalLink || (post.urlSlug ? `/post/${post.urlSlug}` : ''),
+                url: post.canonicalLink,
                 title: post.title,
                 description: post.description,
                 image: post.imageUrl,
@@ -172,4 +207,18 @@
         }
     };
     console.log('Carolina Panorama Global JS loaded');
+
+    // Wait for Broadstreet JS library to load, then insert the ad zone
+    (function loadBroadstreetAndSignalReady() {
+    var bsScript = document.createElement('script');
+    bsScript.src = 'https://cdn.broadstreetads.com/init-2.min.js';
+    bsScript.onload = function() {
+        if (window.broadstreet) {
+        broadstreet.watch({ networkId: 10001 });
+        document.dispatchEvent(new Event('broadstreet:ready'));
+        }
+    };
+    document.head.appendChild(bsScript);
+    })();   
 })();
+

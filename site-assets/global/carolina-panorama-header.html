@@ -1,4 +1,5 @@
 <style>
+
     /* Center pagination controls in search-widget */
     #pagination {
         display: flex;
@@ -68,7 +69,6 @@
     visibility: hidden;
     }
 
-
     /* Article Content Container */
     .cp-article-content {
         padding: clamp(8px, 1.2vw, 12px);
@@ -97,11 +97,10 @@
         text-transform: capitalize;
     }
 
-
     .cp-article-tag.business  { background-color: #10b981 !important; }
     .cp-article-tag.politics  { background-color: #8b5cf6 !important; }
     .cp-article-tag.sports    { background-color: #ac7f0f !important; }
-    .cp-article-tag.hbcus     { background-color: #73000a!important; }
+    .cp-article-tag.hbcu      { background-color: #73000a!important; }
     .cp-article-tag.health    { background-color: #cd4589 !important; }
     .cp-article-tag.education { background-color: #06b6d4 !important; }
     .cp-article-tag.technology{ background-color: #333333 !important; }
@@ -287,6 +286,7 @@
             return url;
         };
 
+
         window.CarolinaPanorama.proxiedLeadConnectorUrl = function(originalUrl, width = 1200) {
             if (!originalUrl) return originalUrl;
             const normalized = window.CarolinaPanorama.normalizeUrl(originalUrl);
@@ -324,7 +324,7 @@
 
                 const image = getMetaContent('og:image') ||
                     getMetaContent('twitter:image') ||
-                    'https://via.placeholder.com/400x200';
+                    "https://storage.googleapis.com/msgsndr/9Iv8kFcMiUgScXzMPv23/media/697bd8644d56831c95c3248d.svg";
 
                 const authorElement = doc.querySelector('.blog-author-name, [itemprop="author"]');
                 const author = authorElement?.textContent?.trim() || 'Carolina Panorama';
@@ -355,6 +355,7 @@
                 return null;
             }
         };
+
         // proxiedLeadConnectorUrl already present as window.CarolinaPanorama.proxiedLeadConnectorUrl
         /**
          * Fetch articles from backend API and map to metadata objects.
@@ -381,45 +382,46 @@
                 // If tag is an array, join with comma, else use as is
                 const tagValue = Array.isArray(tag) ? tag.join(',') : tag;
                 params.push(`tag=${encodeURIComponent(tagValue)}`);
-            } else if (categoryUrlSlug && !tag) {
-                params.push(`categoryUrlSlug=${encodeURIComponent(categoryUrlSlug)}`);
-            }
-            const url = `${baseUrl}?${params.join('&')}`;
-            try {
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`Backend fetch failed: ${response.status}`);
-                const data = await response.json();
-                if (!data.blogPosts || !Array.isArray(data.blogPosts)) return [];
-                return data.blogPosts.map(post => ({
-                    url: post.canonicalLink || (post.urlSlug ? `/post/${post.urlSlug}` : ''),
-                    title: post.title,
-                    description: post.description,
-                    image: post.imageUrl,
-                    author: post.author?.name || 'Unknown',
-                    date: post.publishedAt,
-                    categories: Array.isArray(post.categories) && post.categories.length > 0
-                        ? post.categories.map(cat => cat.label)
-                        : ['News']
-                }));
-            } catch (error) {
-                console.error('Error fetching articles from backend:', error);
-                return [];
-            }
-        };
-        console.log('Carolina Panorama Global JS loaded');
-    })();
+        } else if (categoryUrlSlug && !tag) {
+            params.push(`categoryUrlSlug=${encodeURIComponent(categoryUrlSlug)}`);
+        }
+        const url = `${baseUrl}?${params.join('&')}`;
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`Backend fetch failed: ${response.status}`);
+            const data = await response.json();
+            if (!data.blogPosts || !Array.isArray(data.blogPosts)) return [];
+            return data.blogPosts.map(post => ({
+                url: post.canonicalLink,
+                title: post.title,
+                description: post.description,
+                image: post.imageUrl,
+                author: post.author?.name || 'Unknown',
+                date: post.publishedAt,
+                categories: Array.isArray(post.categories) && post.categories.length > 0
+                    ? post.categories.map(cat => cat.label)
+                    : ['News']
+            }));
+        } catch (error) {
+            console.error('Error fetching articles from backend:', error);
+            return [];
+        }
+    };
+    console.log('Carolina Panorama Global JS loaded');
 
     // Wait for Broadstreet JS library to load, then insert the ad zone
     (function loadBroadstreetAndSignalReady() {
-    var bsScript = document.createElement('script');
-    bsScript.src = 'https://cdn.broadstreetads.com/init-2.min.js';
-    bsScript.onload = function() {
-        if (window.broadstreet) {
-        console.log('Broadstreet ads library loaded and ready.');
-        broadstreet.watch({ networkId: 10001 });
-        document.dispatchEvent(new Event('broadstreet:ready'));
-        }
-    };
-    document.head.appendChild(bsScript);
-    })();   
+        var bsScript = document.createElement('script');
+        bsScript.src = 'https://cdn.broadstreetads.com/init-2.min.js';
+        bsScript.onload = function() {
+            if (window.broadstreet) {
+            broadstreet.watch({ networkId: 10001 });
+            document.dispatchEvent(new Event('broadstreet:ready'));
+            }
+        };
+        document.head.appendChild(bsScript);
+        })();   
+    })();
+
+
 </script>
