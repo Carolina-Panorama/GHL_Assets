@@ -256,11 +256,22 @@
                 if (!el) return;
                 const raw = (el.textContent || '').trim();
                 if (!raw) return;
-                // Expecting comma-separated list like: id1,id2,id3
-                const items = raw.split(/,|\r?\n/).map(s => s.trim()).filter(Boolean);
-                if (items.length) {
-                    window.TOP_ARTICLES = items;
-                }
+                    // Expecting comma-separated list of URLs, extract urlSlugs
+                    const items = raw.split(/,|\r?\n/).map(s => s.trim()).filter(Boolean);
+                    if (items.length) {
+                        // Extract slug from each URL (after last '/')
+                        const slugs = items.map(url => {
+                            try {
+                                // Remove trailing slash if present
+                                const cleanUrl = url.replace(/\/$/, '');
+                                // Get last segment after '/'
+                                return cleanUrl.split('/').pop();
+                            } catch (e) {
+                                return url;
+                            }
+                        });
+                        window.TOP_ARTICLES = slugs;
+                    }
             } catch (e) {
                 console.error('Error reading GHL_TOP_ARTICLES:', e);
             }

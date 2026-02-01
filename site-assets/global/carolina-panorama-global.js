@@ -88,6 +88,7 @@
 
     window.CarolinaPanorama.proxiedLeadConnectorUrl = function(originalUrl, width = 1200) {
         if (!originalUrl) return originalUrl;
+        if((new URL(originalUrl)).hostname != "storage.googleapis.com") return originalUrl;  // Only proxy GHL storage URLs;
         const normalized = window.CarolinaPanorama.normalizeUrl(originalUrl);
         if (!normalized) return normalized;
         const safe = encodeURI(normalized);
@@ -123,7 +124,7 @@
 
             const image = getMetaContent('og:image') ||
                 getMetaContent('twitter:image') ||
-                '
+                'https://storage.googleapis.com/msgsndr/9Iv8kFcMiUgScXzMPv23/media/697bd8644d56831c95c3248d.svg';
 
             const authorElement = doc.querySelector('.blog-author-name, [itemprop="author"]');
             const author = authorElement?.textContent?.trim() || 'Carolina Panorama';
@@ -191,7 +192,7 @@
             const data = await response.json();
             if (!data.blogPosts || !Array.isArray(data.blogPosts)) return [];
             return data.blogPosts.map(post => ({
-                url: post.canonicalLink,
+                url: post.canonicalLink  || (post.urlSlug ? `/post/${post.urlSlug}` : ''),
                 title: post.title,
                 description: post.description,
                 image: post.imageUrl,
