@@ -117,10 +117,19 @@
                 if (!el) return;
                 const raw = (el.textContent || '').trim();
                 if (!raw) return;
-                // Expecting comma-separated list like: id1,id2,id3
+                // Expecting comma-separated list of URLs, extract urlSlugs
                 const items = raw.split(/,|\r?\n/).map(s => s.trim()).filter(Boolean);
                 if (items.length) {
-                    window.TRENDING_ARTICLES = items;
+                    // Extract slug from each URL (after last '/')
+                    const slugs = items.map(url => {
+                        try {
+                            const cleanUrl = url.replace(/\/$/, '');
+                            return cleanUrl.split('/').pop();
+                        } catch (e) {
+                            return url;
+                        }
+                    });
+                    window.TRENDING_ARTICLES = slugs;
                 }
             } catch (e) {
                 console.error('Error reading GHL_EDITORS_PICKS:', e);
