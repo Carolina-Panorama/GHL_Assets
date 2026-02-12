@@ -6,30 +6,46 @@
 <script>
   window.CP_MY_WIDGET_ID = 'GHL_MY_WIDGET';
   (function () {
-    const id = window.CP_MY_WIDGET_ID || 'GHL_MY_WIDGET';
+    const id = window.CP_MY_WIDGET_ID;
+
     const anchor = document.getElementById(id);
     if (!anchor) return;
-
     const raw = (anchor.textContent || '').trim(); // use if needed
 
-    const version = window.CP_ASSETS_VERSION || 'main';
-    const url = `https://cdn.jsdelivr.net/gh/Carolina-Panorama/GHL_Assets@${version}/site-assets/site-home-widgets/my-widget.html`;
+    function withAssetsVersion(callback, timeoutMs) {
+      const start = Date.now();
+      (function check() {
+        const v = window.CP_ASSETS_VERSION;
+        if (v) {
+          callback(v);
+        } else if (Date.now() - start < (timeoutMs || 5000)) {
+          setTimeout(check, 25);
+        } else {
+          console.warn('CP_ASSETS_VERSION not set in time; falling back to "main" for widget loader.');
+          callback('main');
+        }
+      })();
+    }
 
-    fetch(url)
-      .then(r => r.text())
-      .then(html => {
-        const container = document.createElement('div');
-        anchor.parentNode.insertBefore(container, anchor.nextSibling);
-        container.innerHTML = html;
+    withAssetsVersion(function(version) {
+      const url = `https://cdn.jsdelivr.net/gh/Carolina-Panorama/GHL_Assets@${version}/site-assets/site-home-widgets/my-widget.html`;
 
-        container.querySelectorAll('script').forEach(oldScript => {
-          const s = document.createElement('script');
-          if (oldScript.src) s.src = oldScript.src;
-          else s.textContent = oldScript.textContent;
-          oldScript.parentNode.replaceChild(s, oldScript);
-        });
-      })
-      .catch(err => console.error('Error loading my widget:', err));
+      fetch(url)
+        .then(r => r.text())
+        .then(html => {
+          const container = document.createElement('div');
+          anchor.parentNode.insertBefore(container, anchor.nextSibling);
+          container.innerHTML = html;
+
+          container.querySelectorAll('script').forEach(oldScript => {
+            const s = document.createElement('script');
+            if (oldScript.src) s.src = oldScript.src;
+            else s.textContent = oldScript.textContent;
+            oldScript.parentNode.replaceChild(s, oldScript);
+          });
+        })
+        .catch(err => console.error('Error loading my widget:', err));
+    });
   })();
 </script>
 
@@ -41,23 +57,39 @@
     const anchor = document.getElementById(anchorId) || document.currentScript;
     if (!anchor) return;
 
-    const version = window.CP_ASSETS_VERSION || 'main';
-    const url = `https://cdn.jsdelivr.net/gh/Carolina-Panorama/GHL_Assets@${version}/site-assets/site-home-widgets/article-list-feed.html`;
+    function withAssetsVersion(callback, timeoutMs) {
+      const start = Date.now();
+      (function check() {
+        const v = window.CP_ASSETS_VERSION;
+        if (v) {
+          callback(v);
+        } else if (Date.now() - start < (timeoutMs || 5000)) {
+          setTimeout(check, 25);
+        } else {
+          console.warn('CP_ASSETS_VERSION not set in time; falling back to "main" for widget loader.');
+          callback('main');
+        }
+      })();
+    }
 
-    fetch(url)
-      .then(r => r.text())
-      .then(html => {
-        const container = document.createElement('div');
-        anchor.parentNode.insertBefore(container, anchor.nextSibling);
-        container.innerHTML = html;
+    withAssetsVersion(function(version) {
+      const url = `https://cdn.jsdelivr.net/gh/Carolina-Panorama/GHL_Assets@${version}/site-assets/site-home-widgets/article-list-feed.html`;
 
-        container.querySelectorAll('script').forEach(oldScript => {
-          const s = document.createElement('script');
-          if (oldScript.src) s.src = oldScript.src;
-          else s.textContent = oldScript.textContent;
-          oldScript.parentNode.replaceChild(s, oldScript);
-        });
-      })
-      .catch(err => console.error('Error loading trending widget:', err));
+      fetch(url)
+        .then(r => r.text())
+        .then(html => {
+          const container = document.createElement('div');
+          anchor.parentNode.insertBefore(container, anchor.nextSibling);
+          container.innerHTML = html;
+
+          container.querySelectorAll('script').forEach(oldScript => {
+            const s = document.createElement('script');
+            if (oldScript.src) s.src = oldScript.src;
+            else s.textContent = oldScript.textContent;
+            oldScript.parentNode.replaceChild(s, oldScript);
+          });
+        })
+        .catch(err => console.error('Error loading trending widget:', err));
+    });
   })();
 </script>
