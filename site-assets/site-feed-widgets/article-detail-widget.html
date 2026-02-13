@@ -255,6 +255,8 @@
   }
 
   waitForCarolinaPanorama(function () {
+    console.log('[Article Detail Widget] CarolinaPanorama global loaded successfully');
+    
     const container = document.getElementById('cp-article-detail');
     const titleEl = document.getElementById('cp-article-title');
     const metaEl = document.getElementById('cp-article-meta');
@@ -272,6 +274,8 @@
     const backToTopBtn = document.getElementById('cp-back-to-top');
 
     const apiBase = window.CarolinaPanorama.API_BASE_URL || 'https://cms.carolinapanorama.org';
+    console.log('[Article Detail Widget] API Base URL:', apiBase);
+    
     // Path to your 404 page on the main site
     const notFoundUrl = '/404-page';
 
@@ -285,9 +289,15 @@
 
     function getSlugFromPath() {
       const path = window.location.pathname || '';
+      console.log('[Article Detail Widget] Current pathname:', path);
       const match = path.match(/\/post\/([^/]+)/);
-      if (!match) return null;
-      return decodeURIComponent(match[1]);
+      if (!match) {
+        console.warn('[Article Detail Widget] Could not extract slug from path. Expected pattern: /post/{slug}');
+        return null;
+      }
+      const slug = decodeURIComponent(match[1]);
+      console.log('[Article Detail Widget] Extracted slug:', slug);
+      return slug;
     }
 
     function formatPublishDate(dateStr) {
@@ -401,24 +411,35 @@
     }
 
     async function loadArticle() {
+      console.log('[Article Detail Widget] Starting loadArticle()');
       const slug = getSlugFromPath();
       if (!slug) {
         // If we can't determine the slug, send the user to a 404 page
+        console.error('[Article Detail Widget] No slug found, redirecting to 404');
         window.location.href = notFoundUrl;
         return;
       }
 
       const url = `${apiBase}/api/public/articles/slug/${encodeURIComponent(slug)}`;
+      console.log('[Article Detail Widget] Fetching article from:', url);
+      
       try {
         const res = await fetch(url);
+        console.log('[Article Detail Widget] Response status:', res.status);
+        
         const json = await res.json();
+        console.log('[Article Detail Widget] Response data:', json);
+        
         if (!json.success || !json.data) {
+          console.error('[Article Detail Widget] Article not found or invalid response');
           window.location.href = notFoundUrl;
           return;
         }
 
         const article = json.data;
         const pageTitle = article.title || 'Article';
+        console.log('[Article Detail Widget] Rendering article:', pageTitle);
+        
         titleEl.textContent = pageTitle;
         // Update browser tab title using meta_title if available
         if (article.meta_title) {
@@ -432,8 +453,10 @@
 
         renderTags(article.tags || []);
         renderAuthor(article.author || null);
+        
+        console.log('[Article Detail Widget] Article rendered successfully');
       } catch (e) {
-        console.error('Failed to load article from CMS:', e);
+        console.error('[Article Detail Widget] Failed to load article:', e);
         window.location.href = notFoundUrl;
       }
     }
@@ -442,6 +465,7 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
+    console.log('[Article Detail Widget] Initializing...');
     loadArticle();
   });
 </script>
