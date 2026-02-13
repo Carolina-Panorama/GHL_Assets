@@ -36,6 +36,25 @@
     text-decoration: underline;
   }
 
+  .article-detail-featured-image {
+    margin: 20px 0;
+    width: 100%;
+  }
+
+  .article-detail-featured-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 8px;
+  }
+
+  .article-detail-featured-image figcaption {
+    font-size: 0.9rem;
+    color: #6b7280;
+    margin-top: 8px;
+    font-style: italic;
+  }
+
   .article-detail-body {
     font-size: 1.05rem;
     line-height: 1.8;
@@ -51,7 +70,7 @@
   .article-detail-body h3,
   .article-detail-body h4 {
     margin-top: 1.4em;
-    margin-bottom: 0.6em;
+    margin-bottom: 0.9em;
   }
 
   .article-tags-section {
@@ -196,6 +215,10 @@
     <h1 class="article-detail-title" id="cp-article-title">Loading article...</h1>
     <div class="article-detail-meta" id="cp-article-meta">Please wait while we load the content.</div>
   </div>
+  <figure class="article-detail-featured-image" id="cp-article-featured-image" style="display:none;">
+    <img id="cp-featured-image-img" src="" alt="">
+    <figcaption id="cp-featured-image-caption"></figcaption>
+  </figure>
   <div class="article-detail-body" id="cp-article-body"></div>
   <div class="article-tags-section" id="cp-article-tags-section" style="display:none;">
     <div class="article-tags-label">Tags</div>
@@ -235,6 +258,9 @@
     const container = document.getElementById('cp-article-detail');
     const titleEl = document.getElementById('cp-article-title');
     const metaEl = document.getElementById('cp-article-meta');
+    const featuredImageEl = document.getElementById('cp-article-featured-image');
+    const featuredImageImg = document.getElementById('cp-featured-image-img');
+    const featuredImageCaption = document.getElementById('cp-featured-image-caption');
     const bodyEl = document.getElementById('cp-article-body');
     const tagsSectionEl = document.getElementById('cp-article-tags-section');
     const tagsListEl = document.getElementById('cp-article-tags');
@@ -308,6 +334,22 @@
           return `<a class="article-tag-pill" href="${href}">${name}</a>`;
         })
         .join('');
+    }
+
+    function renderFeaturedImage(featured_image, featured_image_alt) {
+      if (!featured_image) {
+        featuredImageEl.style.display = 'none';
+        return;
+      }
+      featuredImageEl.style.display = '';
+      featuredImageImg.src = featured_image;
+      featuredImageImg.alt = featured_image_alt || '';
+      if (featured_image_alt) {
+        featuredImageCaption.textContent = featured_image_alt;
+        featuredImageCaption.style.display = '';
+      } else {
+        featuredImageCaption.style.display = 'none';
+      }
     }
 
     function renderAuthor(author) {
@@ -385,6 +427,7 @@
           document.title = pageTitle + ' | Carolina Panorama';
         }
         metaEl.innerHTML = renderCategories(article.categories || [], article.publish_date);
+        renderFeaturedImage(article.featured_image, article.featured_image_alt);
         bodyEl.innerHTML = article.content || '';
 
         renderTags(article.tags || []);

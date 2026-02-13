@@ -260,7 +260,7 @@
                 if (!el) return;
                 const raw = (el.textContent || '').trim();
                 if (!raw) return;
-                    // Expecting comma-separated list of URLs, extract urlSlugs
+                    // Expecting comma-separated list of URLs, extract slugs
                     const items = raw.split(/,|\r?\n/).map(s => s.trim()).filter(Boolean);
                     if (items.length) {
                         // Extract slug from each URL (after last '/')

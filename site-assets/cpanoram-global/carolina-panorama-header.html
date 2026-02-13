@@ -430,7 +430,7 @@
                 const data = await response.json();
                 if (!data.blogPosts || !Array.isArray(data.blogPosts)) return [];
                 return data.blogPosts.map(post => ({
-                    url: post.canonicalLink  || (post.urlSlug ? `/post/${post.urlSlug}` : ''),
+                    url: post.canonicalLink  || (post.slug ? `/post/${post.slug}` : ''),
                     title: post.title,
                     description: post.description,
                     image: post.imageUrl,

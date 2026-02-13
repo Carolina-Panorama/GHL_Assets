@@ -17,13 +17,13 @@ def generate_widget_loader(widget_path, widget_id, custom_value_key=None):
           return window.CP_ASSETS_VERSION;
         }
 
-        // Fallback: derive from any existing global JS/CSS URL that includes GHL_Assets@
-        var selector = 'script[src*="GHL_Assets@"], link[href*="GHL_Assets@"]';
+        // Fallback: derive from any existing global JS/CSS URL that includes util-ghl-assets@
+        var selector = 'script[src*="util-ghl-assets@"], link[href*="util-ghl-assets@"]';
         var el = document.querySelector(selector);
         if (!el) return null;
 
         var url = el.src || el.href || '';
-        var match = url.match(/GHL_Assets@([^/]+)/);
+        var match = url.match(/util-ghl-assets@([^/]+)/);
         if (match && match[1]) {
           return match[1];
         }
@@ -62,7 +62,7 @@ def generate_widget_loader(widget_path, widget_id, custom_value_key=None):
     if (!anchor) return;
 
     withAssetsVersion(function(version) {{
-      var url = 'https://cdn.jsdelivr.net/gh/Carolina-Panorama/GHL_Assets@' +
+      var url = 'https://cdn.jsdelivr.net/gh/Carolina-Panorama/util-ghl-assets@' +
                 version +
                 '/site-assets/{widget_path}';
 
@@ -96,7 +96,7 @@ def generate_widget_loader(widget_path, widget_id, custom_value_key=None):
 {version_helper}
 
     withAssetsVersion(function(version) {{
-      var url = 'https://cdn.jsdelivr.net/gh/Carolina-Panorama/GHL_Assets@' +
+      var url = 'https://cdn.jsdelivr.net/gh/Carolina-Panorama/util-ghl-assets@' +
                 version +
                 '/site-assets/{widget_path}';
 
