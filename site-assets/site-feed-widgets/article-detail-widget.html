@@ -304,26 +304,15 @@
     }
 
     function getSlugFromPath() {
-      const path = window.location.pathname || '';
-      console.log('[Article Detail Widget] Current pathname:', path);
-      
-      // Try colon format: /article:slug
-      const colonMatch = path.match(/\/article:([^/]+)/);
-      if (colonMatch) {
-        const slug = decodeURIComponent(colonMatch[1]);
-        console.log('[Article Detail Widget] Extracted slug from colon format:', slug);
+      // Try hash fragment: /article#slug
+      const hash = window.location.hash;
+      if (hash && hash.length > 1) {
+        const slug = decodeURIComponent(hash.substring(1));
+        console.log('[Article Detail Widget] Extracted slug from hash:', slug);
         return slug;
       }
       
-      // Try slash format: /article/slug
-      const slashMatch = path.match(/\/article\/([^/]+)/);
-      if (slashMatch) {
-        const slug = decodeURIComponent(slashMatch[1]);
-        console.log('[Article Detail Widget] Extracted slug from slash format:', slug);
-        return slug;
-      }
-      
-      // Check for query parameter: /article?q=slug
+      // Check for query parameter: /article?q=slug (fallback)
       const urlParams = new URLSearchParams(window.location.search);
       const querySlug = urlParams.get('q');
       if (querySlug) {
@@ -332,7 +321,7 @@
         return slug;
       }
       
-      console.warn('[Article Detail Widget] Could not extract slug. Expected: /article:slug, /article/slug, or /article?q=slug');
+      console.warn('[Article Detail Widget] Could not extract slug. Expected: /article#slug or /article?q=slug');
       return null;
     }
 
