@@ -294,7 +294,7 @@ async function fetchChannelInfo() {
 
     if (result.success) {
       videoData = result.data;
-      renderChannelHeader();
+      renderChannelHeader(result.name);
       renderVideosGrid();
     } else {
       showError(result.error || 'Failed to load videos');
@@ -305,15 +305,15 @@ async function fetchChannelInfo() {
   }
 }
 
-function renderChannelHeader() {
+function renderChannelHeader(channelNameText) {
   const channelName = document.getElementById('yt-channel-name');
   const subscribBtn = document.getElementById('yt-subscribe-btn');
   
   // Set channel link
   subscribBtn.href = `https://www.youtube.com/channel/${YT_CHANNEL_CONFIG.channelId}?sub_confirmation=1`;
   
-  // Update channel name - use from config for now (could be fetched from dedicated API call)
-  channelName.textContent = window.ytChannelName;
+  // Update channel name
+  channelName.textContent = channelNameText;
 }
 
 function renderVideosGrid() {
