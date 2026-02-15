@@ -109,73 +109,48 @@
 
     waitForCarolinaPanorama(function() {
         const track = document.getElementById('trending-track');
+        const apiBase = window.CarolinaPanorama.API_BASE_URL || 'https://cms.carolinapanorama.org';
 
-        // Read GHL custom value (comma-separated list) and populate window.TRENDING_ARTICLES
-        (function readGHLEditorsPicks() {
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
             try {
-                const el = document.getElementById('CP_TRENDING_CAROUSEL_V2');
-                if (!el) return;
-                const raw = (el.textContent || '').trim();
-                if (!raw) return;
-                // Expecting comma-separated list of URLs, extract slugs
-                const items = raw.split(/,|\r?\n/).map(s => s.trim()).filter(Boolean);
-                if (items.length) {
-                    // Extract slug from each URL (after last '/')
-                    const slugs = items.map(url => {
-                        try {
-                            const cleanUrl = url.replace(/\/$/, '');
-                            return cleanUrl.split('/').pop();
-                        } catch (e) {
-                            return url;
-                        }
-                    });
-                    window.TRENDING_ARTICLES = slugs;
-                }
+                const options = { month: 'short', day: 'numeric', year: 'numeric' };
+                return new Date(dateStr).toLocaleDateString('en-US', options);
             } catch (e) {
-                console.error('Error reading GHL_EDITORS_PICKS:', e);
+                return dateStr;
             }
-        })();
-
-        // Wait for TRENDING_ARTICLES to be available
-        function waitForArticles(callback, timeout = 5000) {
-            const startTime = Date.now();
-            const checkInterval = setInterval(() => {
-                if (window.TRENDING_ARTICLES && window.TRENDING_ARTICLES.length > 0) {
-                    clearInterval(checkInterval);
-                    callback();
-                } else if (Date.now() - startTime > timeout) {
-                    clearInterval(checkInterval);
-                    console.error('TRENDING_ARTICLES not found');
-                }
-            }, 50);
         }
 
-        // Use global CarolinaPanorama helpers
-        const fetchArticleMetadata = window.CarolinaPanorama.fetchArticleMetadata;
-        const proxiedLeadConnectorUrl = window.CarolinaPanorama.proxiedLeadConnectorUrl;
-        function formatDate(date) {
-            const options = { month: 'short', day: 'numeric', year: 'numeric' };
-            return new Date(date).toLocaleDateString('en-US', options);
+        function slugify(str) {
+            return String(str || '')
+                .toLowerCase()
+                .trim()
+                .replace(/[^a-z0-9\s-]/g, '')
+                .replace(/\s+/g, '-');
         }
 
         // Create article card HTML
-        function createArticleCard(data) {
-            const categoryTag = data.categories[0] || 'News';
-            const categoryClass = categoryTag.toLowerCase().replace(/\s+/g, '-');
-            const proxied = proxiedLeadConnectorUrl(data.image, 600);
+        function createArticleCard(article) {
+            const categoryTag = article.categories?.[0]?.name || 'News';
+            const categoryClass = slugify(categoryTag);
+            const imageUrl = article.featured_image || '';
+            const proxied = window.CarolinaPanorama.proxiedLeadConnectorUrl ? 
+                window.CarolinaPanorama.proxiedLeadConnectorUrl(imageUrl, 600) : imageUrl;
+            const authorName = article.author?.name || 'Carolina Panorama';
+            
             return `
                 <div class="trending-carousel-item">
                     <article class="cp-article-card cp-article-card-medium">
-                        <a href="${data.url}" class="cp-article-card-link">
-                            <img src="${proxied || data.image}" alt="${data.title}" class="cp-article-image">
+                        <a href="${article.url}" class="cp-article-card-link">
+                            <img src="${proxied || imageUrl}" alt="${article.featured_image_alt || article.title}" class="cp-article-image">
                             <div class="cp-article-content">
                                 <div class="cp-article-tags">
                                     <span class="cp-article-tag ${categoryClass}">${categoryTag}</span>
                                 </div>
-                                <h3 class="cp-article-title">${data.title}</h3>
+                                <h3 class="cp-article-title">${article.title}</h3>
                                 <div class="cp-article-meta">
-                                    <span class="cp-article-author">${data.author}</span>
-                                    <span class="cp-article-date">${formatDate(data.date)}</span>
+                                    <span class="cp-article-author">${authorName}</span>
+                                    <span class="cp-article-date">${formatDate(article.publish_date)}</span>
                                 </div>
                             </div>
                         </a>
@@ -184,25 +159,32 @@
             `;
         }
 
-        // Initialize carousel
+        // Initialize carousel from new trending API
         async function initializeCarousel() {
-            const articles = window.TRENDING_ARTICLES;
-            // Fetch all article data
-            const promises = articles.map(async (articleId) => {
-                const articleUrl = `/post/${articleId}`;
-                return await fetchArticleMetadata(articleUrl);
-            });
-            const articleData = await Promise.all(promises);
-            // Filter out failed fetches and create cards
-            const validArticles = articleData.filter(data => data !== null);
-            const cardsHTML = validArticles.map(data => createArticleCard(data)).join('');
-            track.innerHTML = cardsHTML;
+            try {
+                const url = `${apiBase}/api/public/trending`;
+                console.log('[Trending Carousel] Fetching from:', url);
+                
+                const res = await fetch(url);
+                const json = await res.json();
+                
+                if (!json.success || !json.data || json.data.length === 0) {
+                    console.error('[Trending Carousel] No articles returned from API');
+                    return;
+                }
+                
+                const articles = json.data;
+                const source = json.source;
+                console.log(`[Trending Carousel] Loaded ${articles.length} articles (source: ${source})`);
+                
+                const cardsHTML = articles.map(article => createArticleCard(article)).join('');
+                track.innerHTML = cardsHTML;
+            } catch (e) {
+                console.error('[Trending Carousel] Failed to load articles:', e);
+            }
         }
 
-        // Wait for articles and then initialize
-        waitForArticles(() => {
-            initializeCarousel();
-        });
+        initializeCarousel();
     });
     </script>
 </script>

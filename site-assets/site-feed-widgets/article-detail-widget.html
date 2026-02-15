@@ -648,7 +648,11 @@
         const readTimeDateEl = document.getElementById('cp-article-readtime-date');
         readTimeDateEl.innerHTML = renderReadTimeAndDate(article.content, article.publish_date);
         renderFeaturedImage(article.featured_image, article.featured_image_alt);
-        bodyEl.innerHTML = article.content || '';
+        
+        // Clean up content by removing leading empty paragraphs
+        let content = article.content || '';
+        content = content.replace(/^(\s*<p>\s*<\/p>\s*)+/, '');
+        bodyEl.innerHTML = content;
 
         renderTags(article.tags || []);
         renderAuthor(article.author || null);

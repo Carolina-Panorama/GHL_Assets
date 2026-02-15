@@ -253,124 +253,110 @@
     }
 
     waitForCarolinaPanorama(function() {
-        // Read GHL custom value (comma-separated list) and populate window.TOP_ARTICLES
-        (function readGHLTopArticles() {
+        const apiBase = window.CarolinaPanorama.API_BASE_URL || 'https://cms.carolinapanorama.org';
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
             try {
-                const el = document.getElementById('CP_HEADLINES_GRID_V2');
-                if (!el) return;
-                const raw = (el.textContent || '').trim();
-                if (!raw) return;
-                    // Expecting comma-separated list of URLs, extract slugs
-                    const items = raw.split(/,|\r?\n/).map(s => s.trim()).filter(Boolean);
-                    if (items.length) {
-                        // Extract slug from each URL (after last '/')
-                        const slugs = items.map(url => {
-                            try {
-                                // Remove trailing slash if present
-                                const cleanUrl = url.replace(/\/$/, '');
-                                // Get last segment after '/'
-                                return cleanUrl.split('/').pop();
-                            } catch (e) {
-                                return url;
-                            }
-                        });
-                        window.TOP_ARTICLES = slugs;
-                    }
+                const options = { month: 'short', day: 'numeric', year: 'numeric' };
+                return new Date(dateStr).toLocaleDateString('en-US', options);
             } catch (e) {
-                console.error('Error reading GHL_TOP_ARTICLES:', e);
+                return dateStr;
             }
-        })();
-
-        // Wait for TOP_ARTICLES to be available
-        function waitForArticles(callback, timeout = 5000) {
-            const startTime = Date.now();
-            const checkInterval = setInterval(() => {
-                if (window.TOP_ARTICLES && window.TOP_ARTICLES.length >= 5) {
-                    clearInterval(checkInterval);
-                    callback();
-                } else if (Date.now() - startTime > timeout) {
-                    clearInterval(checkInterval);
-                    console.error('TOP_ARTICLES not found or has fewer than 5 articles');
-                }
-            }, 50);
         }
 
-        // Use global CarolinaPanorama helpers
-        const fetchArticleMetadata = window.CarolinaPanorama.fetchArticleMetadata;
-        const proxiedLeadConnectorUrl = window.CarolinaPanorama.proxiedLeadConnectorUrl;
-        function formatDate(date) {
-            const options = { month: 'short', day: 'numeric', year: 'numeric' };
-            return new Date(date).toLocaleDateString('en-US', options);
+        function slugify(str) {
+            return String(str || '')
+                .toLowerCase()
+                .trim()
+                .replace(/[^a-z0-9\s-]/g, '')
+                .replace(/\s+/g, '-');
         }
 
         // Update a single article card
-        function updateArticleCard(linkElement, data) {
-            linkElement.href = data.url;
+        function updateArticleCard(linkElement, article) {
+            linkElement.href = article.url;
 
             const image = linkElement.querySelector('.cp-article-image');
             image.classList.add('is-loading');
-            // Choose proxy width based on position (featured larger)
+            
+            // Use proxied URL if available
             const idx = parseInt(linkElement.getAttribute('data-article-index'), 10);
             const proxyWidth = idx === 0 ? 1200 : 600;
-            const proxied = proxiedLeadConnectorUrl(data.image, proxyWidth);
+            const imageUrl = article.featured_image || '';
+            const proxied = window.CarolinaPanorama.proxiedLeadConnectorUrl ? 
+                window.CarolinaPanorama.proxiedLeadConnectorUrl(imageUrl, proxyWidth) : imageUrl;
 
             image.addEventListener('load', () => {
                 image.classList.remove('is-loading');
-            }, { once: true })
-            image.src = proxied || data.image;
-            image.alt = data.title;
+            }, { once: true });
+            image.src = proxied || imageUrl;
+            image.alt = article.featured_image_alt || article.title;
             
             const tagsContainer = linkElement.querySelector('.cp-article-tags');
-            tagsContainer.innerHTML = data.categories.slice(0, 2).map(cat => 
-                `<span class="cp-article-tag ${cat.toLowerCase()}">${cat}</span>`
-            ).join('');
+            if (article.categories && article.categories.length) {
+                tagsContainer.innerHTML = article.categories.slice(0, 2).map(cat => {
+                    const catName = cat.name || cat;
+                    const catClass = slugify(catName);
+                    return `<span class="cp-article-tag ${catClass}">${catName}</span>`;
+                }).join('');
+            }
             
             const title = linkElement.querySelector('.cp-article-title');
-            title.textContent = data.title;
+            title.textContent = article.title;
             
             const meta = linkElement.querySelector('.cp-article-meta');
-            // Always update author span if present, otherwise insert it before date
             let authorSpan = meta.querySelector('.cp-article-author');
             const dateSpan = meta.querySelector('.cp-article-date');
+            
             if (!authorSpan && dateSpan) {
                 authorSpan = document.createElement('span');
                 authorSpan.className = 'cp-article-author';
                 meta.insertBefore(authorSpan, dateSpan);
             }
             if (authorSpan) {
-                authorSpan.textContent = data.author;
+                const authorName = article.author?.name || 'Carolina Panorama';
+                authorSpan.textContent = authorName;
             }
             if (dateSpan) {
-                dateSpan.textContent = formatDate(data.date);
+                dateSpan.textContent = formatDate(article.publish_date);
             }
             
             const description = linkElement.querySelector('.cp-article-description');
-            if (description && data.description) {
-                description.textContent = data.description;
+            if (description && article.excerpt) {
+                description.textContent = article.excerpt;
             }
         }
 
-        // Initialize all articles
+        // Fetch and initialize all articles from new headlines API
         async function initializeGrid() {
-            const articleLinks = document.querySelectorAll('.cp-article-card-link');
-            
-            const promises = Array.from(articleLinks).map(async (link) => {
-                const index = parseInt(link.getAttribute('data-article-index'), 10);
-                const articleId = window.TOP_ARTICLES[index];
+            try {
+                const url = `${apiBase}/api/public/headlines`;
+                console.log('[Headlines Grid] Fetching from:', url);
                 
-                if (articleId) {
-                    const articleUrl = `/post/${articleId}`;
-                    const data = await fetchArticleMetadata(articleUrl);
-                    updateArticleCard(link, data);
+                const res = await fetch(url);
+                const json = await res.json();
+                
+                if (!json.success || !json.data || json.data.length === 0) {
+                    console.error('[Headlines Grid] No articles returned from API');
+                    return;
                 }
-            });
-            
-            await Promise.all(promises);
+                
+                const articles = json.data;
+                const edition = json.edition;
+                console.log(`[Headlines Grid] Loaded ${articles.length} articles from edition: ${edition || 'N/A'}`);
+                
+                const articleLinks = document.querySelectorAll('.cp-article-card-link');
+                articleLinks.forEach((link, index) => {
+                    if (articles[index]) {
+                        updateArticleCard(link, articles[index]);
+                    }
+                });
+            } catch (e) {
+                console.error('[Headlines Grid] Failed to load articles:', e);
+            }
         }
 
-        // Wait for articles and then initialize
-        waitForArticles(() => {
-            initializeGrid();
-        });
+        initializeGrid();
     });
 </script>
