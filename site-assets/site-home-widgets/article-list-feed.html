@@ -155,7 +155,6 @@ waitForCarolinaPanorama(function() {
     const MAX_ARTICLES = 10; // Number of articles to display
 
     // Use global CarolinaPanorama helpers
-    const proxiedLeadConnectorUrl = window.CarolinaPanorama.proxiedLeadConnectorUrl;
     const apiBase = window.CarolinaPanorama.API_BASE_URL || 'https://cms.carolinapanorama.org';
     function formatDate(date) {
         const options = { month: 'numeric', day: 'numeric', year: 'numeric' };
@@ -168,12 +167,12 @@ waitForCarolinaPanorama(function() {
             const categoryClass = cat.toLowerCase().replace(/\s+/g, '-');
             return `<span class="cp-article-tag ${categoryClass}">${cat}</span>`;
         }).join('');
-        const proxied = proxiedLeadConnectorUrl(data.image, 800);
+        const imageUrl = data.image || 'https://storage.googleapis.com/msgsndr/9Iv8kFcMiUgScXzMPv23/media/697bd8644d56831c95c3248d.svg';
         return `
             <div class="article-list-item">
                 <article class="cp-article-card">
                     <a href="${data.url}" class="cp-article-card-link">
-                        <img src="${proxied || data.image || 'https://storage.googleapis.com/msgsndr/9Iv8kFcMiUgScXzMPv23/media/697bd8644d56831c95c3248d.svg'}" alt="${data.title}" class="cp-article-image">
+                        <img src="${imageUrl}" alt="${data.title}" class="cp-article-image">
                         <div class="cp-article-content">
                             <h2 class="cp-article-title">${data.title}</h2>
                             <div class="cp-article-meta">

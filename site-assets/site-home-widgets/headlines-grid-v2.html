@@ -280,19 +280,14 @@
             const image = linkElement.querySelector('.cp-article-image');
             image.classList.add('is-loading');
             
-            // Use proxied URL if available (with no-image fallback)
-            const idx = parseInt(linkElement.getAttribute('data-article-index'), 10);
-            const proxyWidth = idx === 0 ? 1200 : 600;
+            // Use image URL directly (Cloudflare handles optimization)
             const placeholderUrl = 'https://storage.googleapis.com/msgsndr/9Iv8kFcMiUgScXzMPv23/media/697bd8644d56831c95c3248d.svg';
             const imageUrl = article.featured_image || placeholderUrl;
-            // Only proxy if it's not the placeholder
-            const proxied = (article.featured_image && window.CarolinaPanorama.proxiedLeadConnectorUrl) ? 
-                window.CarolinaPanorama.proxiedLeadConnectorUrl(imageUrl, proxyWidth) : imageUrl;
 
             image.addEventListener('load', () => {
                 image.classList.remove('is-loading');
             }, { once: true });
-            image.src = proxied || imageUrl;
+            image.src = imageUrl;
             image.alt = article.featured_image_alt || article.title;
             
             const tagsContainer = linkElement.querySelector('.cp-article-tags');
