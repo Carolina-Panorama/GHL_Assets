@@ -100,16 +100,30 @@ async function handleSubmission(request, env, corsHeaders) {
     });
   }
 
-  const data = await request.json();
+  const payload = await request.json();
+  
+  // Log the incoming payload for debugging
+  console.log('Received webhook payload:', JSON.stringify(payload, null, 2));
+  
+  // Extract custom data - GHL typically nests it in customData or data field
+  const data = payload.customData || payload.data || payload;
   
   // Validate required fields
-  const requiredFields = ['title', 'description', 'category', 'contact', 'price'];
+  const requiredFields = ['title', 'description', 'category', 'priority'];
   const missing = requiredFields.filter(field => !data[field]);
   
   if (missing.length > 0) {
+    console.log('Missing fields. Received data:', JSON.stringify(data, null, 2));
     return new Response(JSON.stringify({ 
       error: 'Missing required fields', 
-      missing: missing 
+      missing: missing,
+      received_keys: Object.keys(data),
+      field_values: {
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        priority: data.priority
+      }
     }), {
       status: 400,
       headers: corsHeaders
@@ -126,15 +140,16 @@ async function handleSubmission(request, env, corsHeaders) {
     objectID: classifiedId,
     title: sanitizeText(data.title),
     description: sanitizeText(data.description),
+    priority: Math.floor(parseInt(data.priority)/100),
     category: data.category,
     subcategory: data.subcategory || null,
     price: parseFloat(data.price) || 0,
     price_type: data.price_type || 'fixed', // fixed, negotiable, free
     contact: {
-      name: sanitizeText(data.contact.name || ''),
-      email: data.contact.email || '',
-      phone: data.contact.phone || '',
-      preferred_method: data.contact.preferred_method || 'email'
+      name: sanitizeText(data.contact?.name || ''),
+      email: data.contact?.email || '',
+      phone: data.contact?.phone || '',
+      preferred_method: data.contact?.preferred_method || 'email'
     },
     location: {
       city: data.location?.city || '',
@@ -145,7 +160,7 @@ async function handleSubmission(request, env, corsHeaders) {
     images: data.images || [],
     tags: data.tags || [],
     condition: data.condition || null, // new, like_new, good, fair, poor
-    created_at: now.toISOString(),
+    publish_date: data.start.toISOString(),
     updated_at: now.toISOString(),
     expires_at: expirationDate.toISOString(),
     status: 'active',

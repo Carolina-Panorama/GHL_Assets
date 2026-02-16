@@ -863,18 +863,6 @@
         <aside class="search-sidebar">
             <h3>Filter by Category</h3>
             <div id="category-filter"></div>
-
-            <h3 style="margin-top: 30px;">Price Range</h3>
-            <div id="price-filter" class="price-range-container"></div>
-
-            <h3 style="margin-top: 30px;">Condition</h3>
-            <div id="condition-filter"></div>
-
-            <h3 style="margin-top: 30px;">Location</h3>
-            <div id="location-filter"></div>
-
-            <h3 style="margin-top: 30px;">Filter by Tags</h3>
-            <div id="tags-filter"></div>
         </aside>
 
         <div class="search-results">
@@ -953,195 +941,24 @@
         })
     ]);
 
-    // Price range filter
-    search.addWidgets([
-        instantsearch.widgets.rangeInput({
-            container: '#price-filter',
-            attribute: 'price',
-            templates: {
-                separatorText: 'to',
-                submitText: 'Apply',
-            },
-            precision: 0,
-        })
-    ]);
-
-    // Condition filter
-    search.addWidgets([
-        instantsearch.widgets.refinementList({
-            container: '#condition-filter',
-            attribute: 'condition',
-            sortBy: ['name:asc'],
-            transformItems(items) {
-                return items.map(item => ({
-                    ...item,
-                    label: item.label.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-                }));
-            }
-        })
-    ]);
-
-    // Location filter (city/general area)
-    search.addWidgets([
-        instantsearch.widgets.refinementList({
-            container: '#location-filter',
-            attribute: 'location.general_area',
-            limit: 8,
-            showMore: true,
-        })
-    ]);
-
-    // Custom multi-select dropdown for Tags
-    const tagsDropdown = instantsearch.connectors.connectRefinementList(
-        (renderOptions, isFirstRender) => {
-            const { items, refine } = renderOptions;
-            const widgetContainer = document.querySelector('.classifieds-search-widget');
-            const container = widgetContainer ? widgetContainer.querySelector('#tags-filter') : document.querySelector('#tags-filter');
-            
-            if (isFirstRender) {
-                const html = `
-                    <div class="custom-dropdown">
-                        <input type="text" 
-                               class="custom-dropdown-input" 
-                               placeholder="Search tags..."
-                               id="tags-search"
-                               autocomplete="off">
-                        <div class="custom-dropdown-list" id="tags-list"></div>
-                    </div>
-                `;
-                container.innerHTML = html;
-                
-                const input = container.querySelector('#tags-search');
-                const list = container.querySelector('#tags-list');
-                
-                input.addEventListener('focus', () => {
-                    list.classList.add('active');
-                });
-                
-                // Close on click outside - scoped to widget only
-                const clickOutsideHandler = (e) => {
-                    if (!container.contains(e.target)) {
-                        list.classList.remove('active');
-                        document.removeEventListener('click', clickOutsideHandler);
-                    }
-                };
-                
-                input.addEventListener('focus', () => {
-                    document.addEventListener('click', clickOutsideHandler);
-                });
-                
-                input.addEventListener('input', () => {
-                    const searchValue = input.value.toLowerCase();
-                    const checkboxes = list.querySelectorAll('.custom-dropdown-item');
-                    
-                    checkboxes.forEach(item => {
-                        const label = item.querySelector('label span').textContent.toLowerCase();
-                        item.style.display = label.includes(searchValue) ? 'flex' : 'none';
-                    });
-                });
-            }
-            
-            const input = container.querySelector('#tags-search');
-            const list = container.querySelector('#tags-list');
-            const searchValue = input.value.toLowerCase();
-            
-            // Client-side filtering
-            const filteredItems = items.filter(item => 
-                item.label.toLowerCase().includes(searchValue)
-            );
-            
-            list.innerHTML = filteredItems.map(item => `
-                <div class="custom-dropdown-item">
-                    <input type="checkbox" 
-                           id="tag-${item.value.replace(/\s+/g, '-')}" 
-                           ${item.isRefined ? 'checked' : ''}
-                           data-value="${item.value}">
-                    <label for="tag-${item.value.replace(/\s+/g, '-')}">
-                        <span>${item.label.toLowerCase()}</span>
-                        <span class="custom-dropdown-count">${item.count}</span>
-                    </label>
-                </div>
-            `).join('') || '<div style="padding: 12px; color: #718096;">No tags found</div>';
-            
-            // Add event listeners
-            list.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-                checkbox.addEventListener('change', (e) => {
-                    refine(e.target.dataset.value);
-                });
-            });
-        }
-    );
-
-    search.addWidgets([
-        tagsDropdown({
-            attribute: 'tags',
-        })
-    ]);
-
-    // Results with paid listing prioritization
+    // Results with priority-based sorting
     search.addWidgets([
         instantsearch.widgets.hits({
             container: '#hits',
             templates: {
                 item: (hit, { html, components }) => {
-                    const isPaid = hit.is_paid || false;
-                    const cardClass = isPaid ? 'search-result-card paid-listing' : 'search-result-card';
-                    
-                    // Format price
-                    let priceDisplay = '';
-                    if (hit.price === 0 || hit.price_type === 'free') {
-                        priceDisplay = '<span class="search-result-price free">FREE</span>';
-                    } else if (hit.price_type === 'negotiable') {
-                        priceDisplay = `<span class="search-result-price negotiable">$${hit.price.toLocaleString()} (negotiable)</span>`;
-                    } else {
-                        priceDisplay = `<span class="search-result-price">$${hit.price.toLocaleString()}</span>`;
-                    }
-
-                    // Format condition badge
-                    const conditionBadge = hit.condition 
-                        ? `<span class="condition-badge condition-${hit.condition.replace(/[_\s]/g, '-')}">${hit.condition.replace(/[-_]/g, ' ')}</span>`
-                        : '';
-
-                    // Format location
-                    const location = hit.location?.city && hit.location?.state 
-                        ? `📍 ${hit.location.city}, ${hit.location.state}`
-                        : hit.location?.general_area 
-                            ? `📍 ${hit.location.general_area}`
-                            : '';
-
-                    // Format contact preference
-                    const contactMethod = hit.contact?.preferred_method 
-                        ? `Preferred contact: ${hit.contact.preferred_method}`
-                        : '';
-
-                    // Get first image or placeholder
-                    const imageUrl = hit.images && hit.images.length > 0 
-                        ? hit.images[0] 
-                        : 'https://via.placeholder.com/200x150?text=No+Image';
-
                     return html`
-                        <div class="${cardClass}">
-                            ${isPaid ? html`<div class="paid-badge">Featured</div>` : ''}
-                            <div class="search-result-image">
-                                <img src="${imageUrl}" alt="${hit.title}" loading="lazy" />
-                            </div>
+                        <div class="search-result-card">
                             <div class="search-result-content">
                                 <h2 class="search-result-title">
                                     ${components.Highlight({ attribute: 'title', hit })}
-                                    ${conditionBadge}
                                 </h2>
-                                ${priceDisplay}
                                 <div class="search-result-meta">
                                     ${hit.category ? html`<span>${hit.category}</span>` : ''}
-                                    ${hit.subcategory ? html`<span> • ${hit.subcategory}</span>` : ''}
-                                    <span> • Posted ${new Date(hit.created_at).toLocaleDateString()}</span>
-                                    ${hit.expires_at ? html`<span> • Expires ${new Date(hit.expires_at).toLocaleDateString()}</span>` : ''}
                                 </div>
                                 <p class="search-result-excerpt">
                                     ${components.Highlight({ attribute: 'description', hit })}
                                 </p>
-                                ${location ? html`<div class="search-result-location">${location}</div>` : ''}
-                                ${contactMethod ? html`<div class="search-result-contact">${contactMethod}</div>` : ''}
                             </div>
                         </div>
                     `;
@@ -1149,14 +966,11 @@
                 empty: 'No classifieds found for <q>{{query}}</q>'
             },
             transformItems(items) {
-                // Sort items with paid listings first (within each relevance score bracket)
+                // Sort by priority (higher priority first)
                 return items.sort((a, b) => {
-                    // First, prioritize paid listings
-                    if (a.is_paid && !b.is_paid) return -1;
-                    if (!a.is_paid && b.is_paid) return 1;
-                    
-                    // Then by creation date (newest first) within each paid/unpaid group
-                    return new Date(b.created_at) - new Date(a.created_at);
+                    const priorityA = a.priority || 0;
+                    const priorityB = b.priority || 0;
+                    return priorityB - priorityA;
                 });
             }
         })
