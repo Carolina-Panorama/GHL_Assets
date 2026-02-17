@@ -456,8 +456,10 @@
     })();
 
     // ========================================
-    // AD INJECTION & MANAGEMENT
+    // IN-STORY AD INJECTION
     // ========================================
+    // BroadStreet handles all other ad types (pop-ups, sticky notes, etc.) through their dashboard.
+    // We only need to inject in-story ads programmatically since they need to appear mid-article.
 
     /**
      * Inject in-story ad into article content
@@ -467,8 +469,7 @@
         const articleBody = document.getElementById('cp-article-body');
         
         if (!articleBody) {
-            console.log('[CP Ads] Article body not found, skipping in-story ad injection');
-            return;
+            return; // Not an article page, skip
         }
 
         // Get all paragraphs in the article
@@ -494,128 +495,13 @@
         console.log('[CP Ads] In-story ad injected after paragraph', insertionIndex + 1);
     }
 
-    /**
-     * Initialize delayed pop-up ad
-     * Shows pop-up after user has been on page for a specified time
-     */
-    function initializeDelayedPopup(delaySeconds = 10) {
-        // Check if user has seen popup recently (using sessionStorage)
-        if (sessionStorage.getItem('cp_popup_shown')) {
-            console.log('[CP Ads] Pop-up already shown this session');
-            return;
-        }
-
-        setTimeout(function() {
-            const popupElement = document.querySelector('.ad-zone-popup');
-            const backdropElement = document.querySelector('.ad-zone-popup-backdrop');
-            
-            if (popupElement && backdropElement) {
-                backdropElement.style.display = 'block';
-                popupElement.style.display = 'block';
-                sessionStorage.setItem('cp_popup_shown', 'true');
-                
-                // Close on backdrop click
-                backdropElement.addEventListener('click', function() {
-                    backdropElement.style.display = 'none';
-                    popupElement.style.display = 'none';
-                });
-                
-                console.log('[CP Ads] Pop-up displayed after', delaySeconds, 'seconds');
-            }
-        }, delaySeconds * 1000);
-    }
-
-    /**
-     * Initialize exit-intent pop-up
-     * Shows when user moves mouse toward browser chrome (trying to leave)
-     */
-    function initializeExitIntentPopup() {
-        // Check if user has seen popup recently
-        if (sessionStorage.getItem('cp_popup_shown')) {
-            return;
-        }
-
-        let triggered = false;
-
-        document.addEventListener('mouseleave', function(e) {
-            // Only trigger if mouse leaves from top of viewport
-            if (e.clientY < 10 && !triggered) {
-                triggered = true;
-                
-                const popupElement = document.querySelector('.ad-zone-popup');
-                const backdropElement = document.querySelector('.ad-zone-popup-backdrop');
-                
-                if (popupElement && backdropElement) {
-                    backdropElement.style.display = 'block';
-                    popupElement.style.display = 'block';
-                    sessionStorage.setItem('cp_popup_shown', 'true');
-                    
-                    // Close on backdrop click
-                    backdropElement.addEventListener('click', function() {
-                        backdropElement.style.display = 'none';
-                        popupElement.style.display = 'none';
-                    });
-                    
-                    console.log('[CP Ads] Exit-intent pop-up triggered');
-                }
-            }
-        });
-    }
-
-    /**
-     * Initialize slide-in ad with delay
-     */
-    function initializeSlideIn(delaySeconds = 5) {
-        setTimeout(function() {
-            const slideInElement = document.querySelector('.ad-zone-slide-in');
-            
-            if (slideInElement) {
-                slideInElement.style.display = 'block';
-                console.log('[CP Ads] Slide-in ad displayed');
-                
-                // Optional: Add close button functionality
-                const closeButton = slideInElement.querySelector('.ad-close-button');
-                if (closeButton) {
-                    closeButton.addEventListener('click', function() {
-                        slideInElement.style.display = 'none';
-                    });
-                }
-            }
-        }, delaySeconds * 1000);
-    }
-
-    /**
-     * Initialize all ad placements
-     */
-    function initializeAds() {
-        console.log('[CP Ads] Initializing ad placements...');
-        
-        // Inject in-story ad on article pages
-        if (document.getElementById('cp-article-body')) {
-            // Wait a moment for article content to fully load
-            setTimeout(function() {
-                injectInstoryAd();
-            }, 500);
-        }
-        
-        // Initialize pop-up (choose one strategy):
-        // Option 1: Time-delayed pop-up
-        // initializeDelayedPopup(15); // Show after 15 seconds
-        
-        // Option 2: Exit-intent pop-up
-        // initializeExitIntentPopup();
-        
-        // Initialize slide-in ad
-        // initializeSlideIn(8); // Show after 8 seconds
-        
-        console.log('[CP Ads] Ad initialization complete');
-    }
-
-    // Run ad initialization when DOM is ready
+    // Auto-inject in-story ad when article content loads
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initializeAds);
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(injectInstoryAd, 500); // Brief delay for article content to render
+        });
     } else {
-        initializeAds();
+        setTimeout(injectInstoryAd, 500);
     }
 
 })();
