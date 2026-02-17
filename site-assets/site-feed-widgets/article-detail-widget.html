@@ -157,11 +157,17 @@
   .article-detail-featured-image {
     margin: 20px 0;
     width: 100%;
+    max-height: 500px;
+    overflow: hidden;
+    border-radius: 8px;
   }
 
   .article-detail-featured-image img {
     width: 100%;
     height: auto;
+    max-height: 500px;
+    object-fit: cover;
+    object-position: center;
     display: block;
     border-radius: 8px;
   }
@@ -172,6 +178,27 @@
     margin-top: 8px;
     font-style: italic;
     text-align: center;
+  }
+
+  /* Responsive featured image sizing */
+  @media (max-width: 768px) {
+    .article-detail-featured-image {
+      max-height: 350px;
+    }
+
+    .article-detail-featured-image img {
+      max-height: 350px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .article-detail-featured-image {
+      max-height: 250px;
+    }
+
+    .article-detail-featured-image img {
+      max-height: 250px;
+    }
   }
 
   .article-detail-body {
