@@ -322,8 +322,9 @@ function renderChannelHeader(channelNameText) {
   // Set channel link
   subscribBtn.href = `https://www.youtube.com/channel/${YT_CHANNEL_CONFIG.channelId}?sub_confirmation=1`;
   
-  // Update channel name
-  channelName.textContent = channelNameText;
+  // Make channel name a clickable link
+  channelName.innerHTML = `<a href="https://www.youtube.com/channel/${YT_CHANNEL_CONFIG.channelId}" target="_blank" style="color: inherit; text-decoration: none;">${channelNameText}</a>`;
+  channelName.style.cursor = 'pointer';
 }
 
 function renderVideosGrid() {
