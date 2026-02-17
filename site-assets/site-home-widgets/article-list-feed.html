@@ -323,13 +323,12 @@ waitForCarolinaPanorama(function() {
     }
 
     // Create featured article card HTML with category header
-    async function createFeaturedArticleCard(data) {
+    async function createFeaturedArticleCard(data, categoryName) {
         const imageUrl = data.image || 'https://storage.googleapis.com/msgsndr/9Iv8kFcMiUgScXzMPv23/media/697bd8644d56831c95c3248d.svg';
-        const category = data.categories[0];
         
         return `
             <div>
-                <h3 class="featured-section-header">${category}</h3>
+                <h3 class="featured-section-header">${categoryName}</h3>
                 <div class="featured-article-item">
                     <a href="${data.url}" class="featured-article-link">
                         <article class="featured-article-card">
@@ -373,9 +372,9 @@ waitForCarolinaPanorama(function() {
 
     // Initialize feed
     async function initializeFeed() {
-        let allArticles = [];
+        let html = '';
         
-        // Fetch articles from each category
+        // Fetch articles from each category and build sections
         for (const category of CATEGORIES) {
             const url = `${apiBase}/api/public/articles?category=${encodeURIComponent(category)}&per_page=${ARTICLES_PER_CATEGORY}&page=1`;
             try {
@@ -393,40 +392,35 @@ waitForCarolinaPanorama(function() {
                             ? article.categories.map(cat => cat.name)
                             : [category]
                     }));
-                    allArticles = allArticles.concat(categoryArticles);
+                    
+                    // Find article with image for featured card
+                    const featuredArticle = categoryArticles.find(article => article.image);
+                    const condensedArticles = categoryArticles.filter(article => article !== featuredArticle).slice(0, CONDENSED_ARTICLES);
+                    
+                    // Build section if we have at least the featured article
+                    if (featuredArticle) {
+                        html += `<div style="margin-bottom: 40px;">`;
+                        html += await createFeaturedArticleCard(featuredArticle, category);
+                        
+                        if (condensedArticles.length > 0) {
+                            html += '<div class="condensed-list-section" style="margin-top: 20px;">';
+                            const condensedCardsHTML = await Promise.all(
+                                condensedArticles.map((data, index) => createCondensedArticleCard(data, index))
+                            );
+                            html += condensedCardsHTML.join('');
+                            html += '</div>';
+                        }
+                        html += '</div>';
+                    }
                 }
             } catch (e) {
                 console.error(`Failed to load articles for category ${category}:`, e);
             }
         }
 
-        if (!allArticles || allArticles.length === 0) {
+        if (!html) {
             container.innerHTML = '<p style="text-align: center; color: #666;">No articles found.</p>';
             return;
-        }
-
-        // Find first article with an image for featured section
-        const featuredArticle = allArticles.find(article => article.image);
-        if (!featuredArticle) {
-            container.innerHTML = '<p style="text-align: center; color: #666;">No articles with images found.</p>';
-            return;
-        }
-
-        // Get condensed articles (exclude the featured one)
-        const condensedArticles = allArticles.filter(article => article !== featuredArticle).slice(0, CONDENSED_ARTICLES);
-
-        // Build HTML
-        let html = await createFeaturedArticleCard(featuredArticle);
-        
-        if (condensedArticles.length > 0) {
-            html += '<div class="condensed-list-section">';
-            html += '<h3 class="condensed-list-title">More from the news</h3>';
-            
-            const condensedCardsHTML = await Promise.all(
-                condensedArticles.map((data, index) => createCondensedArticleCard(data, index))
-            );
-            html += condensedCardsHTML.join('');
-            html += '</div>';
         }
 
         container.innerHTML = html;
