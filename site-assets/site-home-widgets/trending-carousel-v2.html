@@ -173,9 +173,13 @@
                     return;
                 }
                 
-                const articles = json.data;
+                let articles = json.data;
                 const source = json.source;
-                console.log(`[Trending Carousel] Loaded ${articles.length} articles (source: ${source})`);
+                
+                // Sort by most recent publish date
+                articles.sort((a, b) => new Date(b.publish_date) - new Date(a.publish_date));
+                
+                console.log(`[Trending Carousel] Loaded ${articles.length} articles (source: ${source}, sorted by date)`);
                 
                 const cardsHTML = await Promise.all(articles.map(article => createArticleCard(article)));
                 track.innerHTML = cardsHTML.join('');

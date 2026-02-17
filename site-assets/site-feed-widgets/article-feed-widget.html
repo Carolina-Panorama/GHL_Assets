@@ -468,14 +468,22 @@ waitForCarolinaPanorama(function() {
         const headerTitle = document.getElementById('category-title');
         const filter = getFilterFromUrl();
         
-        // Reset classes
+        // Reset classes and inline styles
         headerContainer.className = '';
+        headerContainer.removeAttribute('style');
         
         // SEO Meta injection based on page type
         if (categoryDetails && categoryDetails.label) {
-            // Category state - use cp-article-tag class with category name
+            // Category state - use API color_code for background
             const categoryClass = categoryDetails.label.toLowerCase().replace(/\s+/g, '-');
             headerContainer.className = 'cp-article-tag ' + categoryClass;
+            
+            // Apply API color_code as inline style for header background
+            const categoryStyle = await window.CarolinaPanorama.getCategoryStyle(categoryDetails.label);
+            if (categoryStyle) {
+                headerContainer.setAttribute('style', categoryStyle);
+            }
+            
             headerTitle.innerHTML = `<span class="header-title">${categoryDetails.label}</span>`;
             
             // Set SEO meta for category pages with description and extracted keywords

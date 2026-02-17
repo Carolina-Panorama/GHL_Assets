@@ -314,6 +314,8 @@ waitForCarolinaPanorama(function() {
     const ARTICLES_PER_CATEGORY = 3;
     const FEATURED_ARTICLES = 1;
     const CONDENSED_ARTICLES = 2;
+    const CACHE_KEY = 'cp_homepage_feed_cache';
+    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
     // Use global CarolinaPanorama helpers
     const apiBase = window.CarolinaPanorama.API_BASE_URL || 'https://cms.carolinapanorama.org';
@@ -371,51 +373,114 @@ waitForCarolinaPanorama(function() {
         `;
     }
 
-    // Initialize feed
-    async function initializeFeed() {
-        let html = '';
+    // Fetch articles by category with caching
+    async function fetchCategoryArticles(category) {
+        const url = `${apiBase}/api/public/articles?category=${encodeURIComponent(category)}&per_page=${ARTICLES_PER_CATEGORY}&page=1`;
         
-        // Fetch articles from each category and build sections
+        const res = await fetch(url);
+        const json = await res.json();
+        
+        if (!json.success || !Array.isArray(json.data)) {
+            return [];
+        }
+        
+        const articles = json.data.map(article => ({
+            url: article.url || (article.slug ? `/article#${encodeURIComponent(article.slug)}` : ''),
+            title: article.title,
+            description: article.excerpt || '',
+            image: article.featured_image,
+            author: article.author && article.author.name ? article.author.name : '',
+            date: article.publish_date,
+            categories: Array.isArray(article.categories) && article.categories.length > 0
+                ? article.categories.map(cat => cat.name)
+                : [category]
+        }));
+        
+        // Sort by most recent publish date
+        articles.sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        return articles;
+    }
+
+    // Fetch all articles with caching
+    async function fetchAllArticles() {
+        // Check localStorage cache first
+        try {
+            const cached = localStorage.getItem(CACHE_KEY);
+            if (cached) {
+                const { data, timestamp } = JSON.parse(cached);
+                const age = Date.now() - timestamp;
+                
+                if (age < CACHE_DURATION) {
+                    console.log('[Article List Feed] Loaded from cache (age:', Math.round(age / 1000), 'seconds)');
+                    return data;
+                }
+                // Cache expired
+                localStorage.removeItem(CACHE_KEY);
+            }
+        } catch (e) {
+            console.warn('[Article List Feed] Failed to read cache:', e);
+        }
+        
+        // Fetch fresh data from API
+        console.log('[Article List Feed] Fetching fresh data from API...');
+        const allArticles = {};
+        
         for (const category of CATEGORIES) {
-            const url = `${apiBase}/api/public/articles?category=${encodeURIComponent(category)}&per_page=${ARTICLES_PER_CATEGORY}&page=1`;
             try {
-                const res = await fetch(url);
-                const json = await res.json();
-                if (json.success && Array.isArray(json.data)) {
-                    const categoryArticles = json.data.map(article => ({
-                        url: article.url || (article.slug ? `/post/${article.slug}` : ''),
-                        title: article.title,
-                        description: article.excerpt || '',
-                        image: article.featured_image,
-                        author: article.author && article.author.name ? article.author.name : '',
-                        date: article.publish_date,
-                        categories: Array.isArray(article.categories) && article.categories.length > 0
-                            ? article.categories.map(cat => cat.name)
-                            : [category]
-                    }));
-                    
-                    // Find article with image for featured card
-                    const featuredArticle = categoryArticles.find(article => article.image);
-                    const condensedArticles = categoryArticles.filter(article => article !== featuredArticle).slice(0, CONDENSED_ARTICLES);
-                    
-                    // Build section if we have at least the featured article
-                    if (featuredArticle) {
-                        html += `<div style="margin-bottom: 32px;">`;
-                        html += await createFeaturedArticleCard(featuredArticle, category);
-                        
-                        if (condensedArticles.length > 0) {
-                            html += '<div class="condensed-list-section" style="margin-top: 20px;">';
-                            const condensedCardsHTML = await Promise.all(
-                                condensedArticles.map((data, index) => createCondensedArticleCard(data, index))
-                            );
-                            html += condensedCardsHTML.join('');
-                            html += '</div>';
-                        }
-                        html += '</div>';
-                    }
+                const articles = await fetchCategoryArticles(category);
+                if (articles.length > 0) {
+                    allArticles[category] = articles;
                 }
             } catch (e) {
-                console.error(`Failed to load articles for category ${category}:`, e);
+                console.error(`[Article List Feed] Failed to load ${category}:`, e);
+            }
+        }
+        
+        // Cache the results
+        try {
+            localStorage.setItem(CACHE_KEY, JSON.stringify({
+                data: allArticles,
+                timestamp: Date.now()
+            }));
+            console.log('[Article List Feed] Cached', Object.keys(allArticles).length, 'categories');
+        } catch (e) {
+            console.warn('[Article List Feed] Failed to cache results:', e);
+        }
+        
+        return allArticles;
+    }
+
+    // Initialize feed
+    async function initializeFeed() {
+        const allArticles = await fetchAllArticles();
+        let html = '';
+        
+        // Build sections from cached or fresh data
+        for (const category of CATEGORIES) {
+            const categoryArticles = allArticles[category];
+            if (!categoryArticles || categoryArticles.length === 0) continue;
+            const categoryArticles = allArticles[category];
+            if (!categoryArticles || categoryArticles.length === 0) continue;
+            
+            // Find article with image for featured card
+            const featuredArticle = categoryArticles.find(article => article.image);
+            const condensedArticles = categoryArticles.filter(article => article !== featuredArticle).slice(0, CONDENSED_ARTICLES);
+            
+            // Build section if we have at least the featured article
+            if (featuredArticle) {
+                html += `<div style="margin-bottom: 32px;">`;
+                html += await createFeaturedArticleCard(featuredArticle, category);
+                
+                if (condensedArticles.length > 0) {
+                    html += '<div class="condensed-list-section" style="margin-top: 20px;">';
+                    const condensedCardsHTML = await Promise.all(
+                        condensedArticles.map((data, index) => createCondensedArticleCard(data, index))
+                    );
+                    html += condensedCardsHTML.join('');
+                    html += '</div>';
+                }
+                html += '</div>';
             }
         }
 
