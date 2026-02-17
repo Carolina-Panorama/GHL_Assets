@@ -254,3 +254,175 @@ h3 {
 .blog-image.blog-image-corner.blog-image-compact {
     object-fit: contain;
 }
+
+/* ========================================
+   AD ZONE CLASSES
+   ======================================== */
+
+/* Sticky Note Ad - Top Right Corner */
+.ad-zone-sticky-note {
+    position: fixed;
+    top: 100px;
+    right: 20px;
+    z-index: 998;
+    max-width: 300px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+/* Push Pin Ad - Similar to sticky note */
+.ad-zone-push-pin {
+    position: fixed;
+    top: 120px;
+    right: 20px;
+    z-index: 997;
+    max-width: 280px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Video Pop-Up / Full Pop-Up */
+.ad-zone-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9999;
+    max-width: 90vw;
+    max-height: 90vh;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+/* Popup backdrop/overlay */
+.ad-zone-popup-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 9998;
+    backdrop-filter: blur(2px);
+}
+
+/* Slide In Ad - Slides from side */
+.ad-zone-slide-in {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 999;
+    max-width: 400px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    animation: slideInFromRight 0.4s ease-out;
+}
+
+@keyframes slideInFromRight {
+    from {
+        transform: translateX(calc(100% + 40px));
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Sidebar Ad Zones */
+.ad-zone-sidebar {
+    width: 100%;
+    margin-bottom: 24px;
+    min-height: 250px;
+}
+
+.ad-zone-sidebar-top {
+    position: sticky;
+    top: 20px;
+    align-self: flex-start;
+    z-index: 10;
+}
+
+.ad-zone-sidebar-middle {
+    margin: 24px 0;
+}
+
+.ad-zone-sidebar-bottom {
+    margin-top: 24px;
+}
+
+/* Top Banner Ad */
+.ad-zone-top-banner {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto 24px;
+    min-height: 90px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* In-Story Ad - Injected into article content */
+.ad-zone-instory {
+    width: 100%;
+    max-width: 728px;
+    margin: 48px auto;
+    padding: 24px 0;
+    border-top: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 90px;
+}
+
+/* Footer Ad */
+.ad-zone-footer {
+    width: 100%;
+    max-width: 1200px;
+    margin: 32px auto 0;
+    padding: 24px 0;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Mobile Responsive Ad Adjustments */
+@media (max-width: 768px) {
+    .ad-zone-sticky-note,
+    .ad-zone-push-pin {
+        position: static;
+        margin: 16px auto;
+        max-width: 100%;
+        right: auto;
+        top: auto;
+    }
+    
+    .ad-zone-slide-in {
+        max-width: calc(100vw - 32px);
+        right: 16px;
+        bottom: 16px;
+    }
+    
+    .ad-zone-popup {
+        max-width: 95vw;
+        max-height: 95vh;
+    }
+    
+    .ad-zone-top-banner {
+        min-height: 50px;
+    }
+    
+    .ad-zone-sidebar-top {
+        position: static;
+    }
+    
+    .ad-zone-instory {
+        margin: 32px auto;
+        padding: 16px 0;
+    }
+}
