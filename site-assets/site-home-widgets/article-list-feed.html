@@ -5,7 +5,7 @@
 <style>
     .article-list-feed-wrapper {
         width: 100%;
-        max-width: 1200px;
+        max-width: 900px;
         margin: 0 auto;
         padding: clamp(12px, 1.6vw, 20px);
     }
@@ -16,68 +16,104 @@
         gap: 0;
     }
 
-    /* List-specific card layout */
+    /* Condensed list layout */
     .article-list-item {
         display: block;
+        transition: background-color 0.15s ease;
+    }
+
+    .article-list-item:hover {
+        background-color: #f9fafb;
     }
 
     .article-list-item .cp-article-card {
         display: grid;
-        grid-template-columns: 1fr 280px;
-        gap: clamp(20px, 2.5vw, 32px);
-        align-items: center;
-        padding: clamp(16px, 2vw, 24px) clamp(8px, 1vw, 10px);
+        grid-template-columns: 60px 1fr auto;
+        gap: 12px;
+        align-items: start;
+        padding: 12px 8px;
+        box-shadow: none;
+        border-radius: 0;
     }
 
     .article-list-item .cp-article-card-link {
         display: contents;
     }
 
+    /* Number badge */
+    .article-number {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #9ca3af;
+        text-align: center;
+        padding-top: 2px;
+    }
+
+    .article-list-item:hover .article-number {
+        color: #003366;
+    }
+
     .article-list-item .cp-article-content {
         padding: 0;
-        gap: clamp(6px, 0.8vw, 8px);
-        order: 1;
+        gap: 4px;
+        min-width: 0;
     }
 
-    .article-list-item .cp-article-image {
-        height: 180px;
-        border-radius: 6px;
-        order: 2;
+    /* Category tags - stacked vertically for consistent alignment */
+    .article-list-item .cp-article-tags {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        align-items: flex-start;
+        min-width: 90px;
+        max-width: 90px;
+        flex-shrink: 0;
     }
 
+    .article-list-item .cp-article-tag {
+        font-size: 0.7rem;
+        padding: 3px 8px;
+        white-space: nowrap;
+        width: 100%;
+        text-align: center;
+        box-sizing: border-box;
+    }
+
+    /* Title - single line with truncation */
     .article-list-item .cp-article-title {
-        font-size: clamp(1.125rem, 2vw, 1.375rem);
-        line-height: 1.25;
-        margin-bottom: clamp(6px, 0.8vw, 8px);
-        display: -webkit-box;
-        -webkit-line-clamp: 3;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
+        font-size: 0.95rem;
+        line-height: 1.3;
+        margin: 0;
         font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: #1a202c;
     }
 
+    .article-list-item:hover .cp-article-title {
+        color: #003366;
+    }
+
+    /* Meta - compact inline */
     .article-list-item .cp-article-meta {
         margin: 0;
-        font-size: clamp(0.8rem, 1vw, 0.875rem);
+        font-size: 0.75rem;
+        color: #6b7280;
+        display: flex;
+        gap: 8px;
+        align-items: center;
     }
 
-    .article-list-item .cp-article-description {
-        font-size: clamp(0.875rem, 1.1vw, 0.9375rem);
-        line-height: 1.5;
-        margin: clamp(8px, 1vw, 10px) 0;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
+    .article-list-item .cp-article-author::before {
+        content: none;
     }
 
-    .article-list-item .cp-article-tags {
-        margin-top: clamp(8px, 1vw, 10px);
-    }
-
+    /* Hide image, description, and read more in condensed view */
+    .article-list-item .cp-article-image,
+    .article-list-item .cp-article-description,
     .article-list-item .cp-article-read-more {
-        margin-top: clamp(8px, 1vw, 10px);
-        font-size: clamp(0.875rem, 1vw, 0.9375rem);
+        display: none;
     }
 
     /* Separator between articles */
@@ -86,27 +122,35 @@
     }
 
     /* Responsive design */
-    @media (max-width: 768px) {
+    @media (max-width: 640px) {
         .article-list-item .cp-article-card {
-            grid-template-columns: 1fr;
-            gap: 12px;
+            grid-template-columns: 40px 1fr;
+            gap: 8px;
+        }
+
+        .article-number {
+            font-size: 1rem;
+        }
+
+        .article-list-item .cp-article-tags {
+            grid-column: 2;
+            flex-direction: row;
+            flex-wrap: wrap;
+            min-width: auto;
+            max-width: none;
+            margin-bottom: 4px;
+        }
+
+        .article-list-item .cp-article-tag {
+            width: auto;
         }
 
         .article-list-item .cp-article-content {
-            order: 2;
-        }
-
-        .article-list-item .cp-article-image {
-            order: 1;
-            height: 200px;
+            grid-column: 2;
         }
 
         .article-list-item .cp-article-title {
-            font-size: 1.125rem;
-        }
-
-        .article-list-item .cp-article-description {
-            -webkit-line-clamp: 2;
+            font-size: 0.9rem;
         }
     }
 </style>
@@ -162,28 +206,36 @@ waitForCarolinaPanorama(function() {
     }
 
     // Create article card HTML
-    function createArticleCard(data) {
-        const categoryTags = data.categories.slice(0, 2).map(cat => {
-            const categoryClass = cat.toLowerCase().replace(/\s+/g, '-');
-            return `<span class="cp-article-tag ${categoryClass}">${cat}</span>`;
-        }).join('');
+    async function createArticleCard(data, index) {
+        // Get category styles dynamically - limit to 2, stack vertically
+        const categoryTagsHTML = await Promise.all(
+            data.categories.slice(0, 2).map(async cat => {
+                const categoryClass = cat.toLowerCase().replace(/\s+/g, '-');
+                const style = await window.CarolinaPanorama.getCategoryStyle(cat);
+                return `<span class="cp-article-tag ${categoryClass}" style="${style}">${cat}</span>`;
+            })
+        );
+        
+        // Pad with empty tag if only 1 category to maintain consistent height
+        while (categoryTagsHTML.length < 2) {
+            categoryTagsHTML.push('<span class="cp-article-tag" style="visibility: hidden;">Placeholder</span>');
+        }
+        
         const imageUrl = data.image || 'https://storage.googleapis.com/msgsndr/9Iv8kFcMiUgScXzMPv23/media/697bd8644d56831c95c3248d.svg';
         return `
             <div class="article-list-item">
                 <article class="cp-article-card">
                     <a href="${data.url}" class="cp-article-card-link">
-                        <img src="${imageUrl}" alt="${data.title}" class="cp-article-image">
+                        <div class="article-number">${index + 1}.</div>
                         <div class="cp-article-content">
-                            <h2 class="cp-article-title">${data.title}</h2>
+                            <h2 class="cp-article-title" title="${data.title}">${data.title}</h2>
                             <div class="cp-article-meta">
                                 <span class="cp-article-author">${data.author}</span>
                                 <span class="cp-article-date">${formatDate(data.date)}</span>
                             </div>
-                            <p class="cp-article-description">${data.description}</p>
-                            <div class="cp-article-tags">
-                                ${categoryTags}
-                            </div>
-                            <span class="cp-article-read-more">Read More</span>
+                        </div>
+                        <div class="cp-article-tags">
+                            ${categoryTagsHTML.join('')}
                         </div>
                     </a>
                 </article>
@@ -219,8 +271,8 @@ waitForCarolinaPanorama(function() {
             container.innerHTML = '<p style="text-align: center; color: #666;">No articles found.</p>';
             return;
         }
-        const cardsHTML = articles.map(data => createArticleCard(data)).join('');
-        container.innerHTML = cardsHTML;
+        const cardsHTML = await Promise.all(articles.map((data, index) => createArticleCard(data, index)));
+        container.innerHTML = cardsHTML.join('');
     }
 
     // Initialize on page load
