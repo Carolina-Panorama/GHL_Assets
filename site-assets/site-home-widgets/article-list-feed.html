@@ -396,10 +396,13 @@ waitForCarolinaPanorama(function() {
                 : [category]
         }));
         
-        // Sort by most recent publish date
-        articles.sort((a, b) => new Date(b.date) - new Date(a.date));
+        // Filter out articles without valid dates
+        const validArticles = articles.filter(article => article.date);
         
-        return articles;
+        // Sort by most recent publish date
+        validArticles.sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        return validArticles;
     }
 
     // Fetch all articles with caching
