@@ -1,0 +1,788 @@
+<?php
+/**
+ * Shortcode: cp_article_detail
+ * Widget: Article Detail
+ */
+
+function cp_shortcode_article_detail( $atts = [], $content = null, $tag = '' ) {
+    // Enqueue dependencies
+    wp_enqueue_script( 'cp-global-js' );
+
+    // Shortcode attributes with defaults
+    $atts = shortcode_atts( [ 'article_id' => '' ], $atts, 'cp_article_detail' );
+
+    ob_start();
+    ?>
+<!-- Article Detail Widget - Renders a full article page from CMS -->
+<!-- Requires carolina-panorama-global.js to be loaded on the page -->
+
+<style>
+  .article-detail-wrapper {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px 16px 40px;
+  }
+
+  .article-detail-header {
+    margin-bottom: 16px;
+    position: relative;
+  }
+
+  .article-share-buttons {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .article-share-buttons.top {
+    position: absolute;
+    top: 0;
+    right: -16px;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .article-share-buttons.bottom {
+    justify-content: center;
+    margin: 24px 0 12px;
+  }
+
+  .share-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+
+  .article-share-buttons.top .share-button {
+    width: 28px;
+    height: 28px;
+  }
+
+  .share-button:hover {
+    background: #e5e7eb;
+    transform: translateY(-2px);
+  }
+
+  .share-button svg {
+    width: 18px;
+    height: 18px;
+    fill: #4b5563;
+  }
+
+  .article-share-buttons.top .share-button svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .share-button.facebook:hover {
+    background: #1877f2;
+    border-color: #1877f2;
+  }
+
+  .share-button.facebook:hover svg {
+    fill: white;
+  }
+
+  .share-button.twitter:hover {
+    background: #1da1f2;
+    border-color: #1da1f2;
+  }
+
+  .share-button.twitter:hover svg {
+    fill: white;
+  }
+
+  .share-button.linkedin:hover {
+    background: #0077b5;
+    border-color: #0077b5;
+  }
+
+  .share-button.linkedin:hover svg {
+    fill: white;
+  }
+
+  .share-button.email:hover {
+    background: #6b7280;
+    border-color: #6b7280;
+  }
+
+  .share-button.email:hover svg {
+    fill: white;
+  }
+
+  .share-button.reddit:hover {
+    background: #ff4500;
+    border-color: #ff4500;
+  }
+
+  .share-button.reddit:hover svg {
+    fill: white;
+  }
+
+  .share-button.sms:hover {
+    background: #10b981;
+    border-color: #10b981;
+  }
+
+  .share-button.sms:hover svg {
+    fill: white;
+  }
+
+  .share-button.copy:hover {
+    background: #8b5cf6;
+    border-color: #8b5cf6;
+  }
+
+  .share-button.copy:hover svg {
+    fill: white;
+  }
+
+  .article-detail-title {
+    font-size: 28px;
+    line-height: 1.2;
+    font-weight: 700;
+    margin: 0 0 12px;
+    color: #111827;
+    font-family: 'Georgia', serif;
+  }
+
+  .article-detail-meta {
+    font-size: 0.95rem;
+    color: #6b7280;
+    margin-bottom: 12px;
+  }
+
+  .article-detail-meta a {
+    color: #2563eb;
+    text-decoration: underline;
+  }
+
+  .article-detail-meta a:hover {
+    text-decoration: underline;
+  }
+
+  .article-detail-featured-image {
+    margin: 20px 0;
+    width: 100%;
+  }
+
+  .article-detail-featured-image img {
+    max-height: 500px;
+    border-radius: 8px;
+    width: 100%;
+    height: auto;
+    max-height: 500px;
+    object-fit: contain;
+    object-position: center;
+    display: block;
+    border-radius: 8px;
+  }
+
+  .article-detail-featured-image figcaption {
+    font-size: 1.1rem;
+    color: #6b7280;
+    margin-top: 8px;
+    font-style: italic;
+    text-align: center;
+  }
+
+  /* Responsive featured image sizing */
+  @media (max-width: 768px) {
+    .article-detail-featured-image {
+      max-height: 350px;
+    }
+
+    .article-detail-featured-image img {
+      max-height: 350px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .article-detail-featured-image {
+      max-height: 250px;
+    }
+
+    .article-detail-featured-image img {
+      max-height: 250px;
+    }
+  }
+
+  .article-detail-body {
+    font-size: 1.05rem;
+    line-height: 1.8;
+    color: #111827;
+    margin: 20px 0 28px;
+  }
+
+  .article-detail-body p {
+    margin-bottom: 1.1em;
+  }
+
+  .article-detail-body h2,
+  .article-detail-body h3,
+  .article-detail-body h4 {
+    margin-top: 1.4em;
+    margin-bottom: 0.9em;
+  }
+
+  .article-tags-section {
+    border-top: 1px solid #e5e7eb;
+    padding-top: 16px;
+    margin-top: 8px;
+    margin-bottom: 24px;
+  }
+
+  .article-tags-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #4b5563;
+    margin-bottom: 8px;
+  }
+
+  .article-tags-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .article-tag-pill {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #eff6ff;
+    color: #1e3a8a;
+    font-size: 0.85rem;
+    text-decoration: none;
+    border: 1px solid #dbeafe;
+  }
+
+  .article-tag-pill:hover {
+    background: #dbeafe;
+  }
+
+  .article-author-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px 18px;
+    border-radius: 10px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    margin-bottom: 24px;
+  }
+
+  .article-author-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 999px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: #6b7280;
+  }
+
+  .article-author-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .article-author-meta {
+    flex: 1;
+  }
+
+  .article-author-name {
+    font-weight: 700;
+    margin: 0 0 4px;
+  }
+
+  .article-author-name a {
+    color: #111827;
+    text-decoration: none;
+  }
+
+  .article-author-name a:hover {
+    color: #2563eb;
+  }
+
+  .article-author-bio {
+    font-size: 0.95rem;
+    color: #4b5563;
+    margin: 4px 0 8px;
+  }
+
+  .article-author-social {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 0.9rem;
+  }
+
+  .article-author-social a {
+    color: #2563eb;
+    text-decoration: none;
+  }
+
+  .article-author-social a:hover {
+    text-decoration: underline;
+  }
+
+  .article-back-to-top {
+    text-align: center;
+    margin-top: 12px;
+  }
+
+  .article-back-to-top button {
+    padding: 10px 22px;
+    border-radius: 999px;
+    border: 1px solid #d1d5db;
+    background: #f9fafb;
+    color: #111827;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+
+  .article-back-to-top button:hover {
+    background: #e5e7eb;
+  }
+
+  @media (max-width: 640px) {
+    .article-detail-wrapper {
+      padding: 16px 12px 32px;
+    }
+
+    .article-author-card {
+      flex-direction: row;
+      align-items: flex-start;
+    }
+  }
+</style>
+
+<div class="article-detail-wrapper" id="cp-article-detail">
+  <div class="article-detail-header">
+    <h1 class="article-detail-title" id="cp-article-title">Loading article...</h1>
+    <div class="article-share-buttons top" id="cp-share-top">
+      <a href="#" class="share-button facebook" data-platform="facebook" title="Share on Facebook">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+      </a>
+      <a href="#" class="share-button linkedin" data-platform="linkedin" title="Share on LinkedIn">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+      </a>
+      <a href="#" class="share-button copy" data-platform="copy" title="Copy Link">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+      </a>
+    </div>
+    <div class="article-detail-meta" id="cp-article-meta">Please wait while we load the content.</div>
+    <div class="article-detail-meta" id="cp-article-readtime-date"></div>
+  </div>
+  <figure class="article-detail-featured-image" id="cp-article-featured-image" style="display:none;">
+    <img id="cp-featured-image-img" src="" alt="">
+    <figcaption id="cp-featured-image-caption"></figcaption>
+  </figure>
+  <div class="article-detail-body" id="cp-article-body"></div>
+  <div class="article-tags-section" id="cp-article-tags-section" style="display:none;">
+    <div class="article-tags-label">Tags</div>
+    <div class="article-tags-list" id="cp-article-tags"></div>
+  </div>
+  <div class="article-author-card" id="cp-article-author-card" style="display:none;">
+    <div class="article-author-avatar" id="cp-article-author-avatar">
+      <span>CP</span>
+    </div>
+    <div class="article-author-meta">
+      <h3 class="article-author-name" id="cp-article-author-name"></h3>
+      <div class="article-author-bio" id="cp-article-author-bio"></div>
+      <div class="article-author-social" id="cp-article-author-social"></div>
+    </div>
+  </div>
+  <div class="article-share-buttons bottom" id="cp-share-bottom">
+    <a href="#" class="share-button facebook" data-platform="facebook" title="Share on Facebook">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+    </a>
+    <a href="#" class="share-button twitter" data-platform="twitter" title="Share on Twitter">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/></svg>
+    </a>
+    <a href="#" class="share-button linkedin" data-platform="linkedin" title="Share on LinkedIn">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+    </a>
+    <a href="#" class="share-button email" data-platform="email" title="Share via Email">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+    </a>
+    <a href="#" class="share-button reddit" data-platform="reddit" title="Share on Reddit">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M24 11.5c0-1.65-1.35-3-3-3-.96 0-1.82.44-2.4 1.13-2.36-1.52-5.59-2.5-9.16-2.63l1.55-7.31 5.07 1.07c.05 1.13.98 2.03 2.13 2.03 1.18 0 2.14-.96 2.14-2.14S19.37.5 18.19.5c-.83 0-1.54.48-1.89 1.17l-5.66-1.2c-.16-.03-.32.02-.43.13-.11.11-.16.26-.14.42l-1.73 8.17c-3.61.11-6.89 1.08-9.28 2.61C-.4 10.94-1.26 10.5-2.22 10.5c-1.65 0-3 1.35-3 3 0 1.18.68 2.19 1.67 2.68-.08.35-.12.71-.12 1.07 0 5.42 6.31 9.82 14.1 9.82s14.1-4.4 14.1-9.82c0-.37-.04-.73-.12-1.08.99-.48 1.67-1.49 1.67-2.67zM6.43 14.72c0-1.18.96-2.14 2.14-2.14s2.14.96 2.14 2.14-.96 2.14-2.14 2.14-2.14-.96-2.14-2.14zm11.98 5.67c-1.47 1.47-4.29 1.58-6.41 1.58s-4.95-.11-6.41-1.58c-.18-.18-.18-.47 0-.65.18-.18.47-.18.65 0 1.18 1.18 3.7 1.6 5.76 1.6s4.58-.42 5.76-1.6c.18-.18.47-.18.65 0 .18.18.18.47 0 .65zm-.54-3.53c-1.18 0-2.14-.96-2.14-2.14s.96-2.14 2.14-2.14 2.14.96 2.14 2.14-.96 2.14-2.14 2.14z"/></svg>
+    </a>
+    <a href="#" class="share-button sms" data-platform="sms" title="Share via Text">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM9 11H7V9h2v2zm4 0h-2V9h2v2zm4 0h-2V9h2v2z"/></svg>
+    </a>
+    <a href="#" class="share-button copy" data-platform="copy" title="Copy Link">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+    </a>
+  </div>
+  <div class="article-back-to-top">
+    <button type="button" id="cp-back-to-top">Back to Top</button>
+  </div>
+</div>
+
+<script>
+  // Wait for CarolinaPanorama global before running widget logic
+  function waitForCarolinaPanorama(callback, timeout = 5000) {
+    const start = Date.now();
+    (function check() {
+      if (window.CarolinaPanorama) {
+        callback();
+      } else if (Date.now() - start < timeout) {
+        setTimeout(check, 30);
+      } else {
+        console.error('CarolinaPanorama global not found for article detail widget.');
+      }
+    })();
+  }
+
+  waitForCarolinaPanorama(function () {
+    console.log('[Article Detail Widget] CarolinaPanorama global loaded successfully');
+    
+    const container = document.getElementById('cp-article-detail');
+    const titleEl = document.getElementById('cp-article-title');
+    const metaEl = document.getElementById('cp-article-meta');
+    const featuredImageEl = document.getElementById('cp-article-featured-image');
+    const featuredImageImg = document.getElementById('cp-featured-image-img');
+    const featuredImageCaption = document.getElementById('cp-featured-image-caption');
+    const bodyEl = document.getElementById('cp-article-body');
+    const tagsSectionEl = document.getElementById('cp-article-tags-section');
+    const tagsListEl = document.getElementById('cp-article-tags');
+    const authorCardEl = document.getElementById('cp-article-author-card');
+    const authorAvatarEl = document.getElementById('cp-article-author-avatar');
+    const authorNameEl = document.getElementById('cp-article-author-name');
+    const authorBioEl = document.getElementById('cp-article-author-bio');
+    const authorSocialEl = document.getElementById('cp-article-author-social');
+    const backToTopBtn = document.getElementById('cp-back-to-top');
+
+    const apiBase = window.CarolinaPanorama.API_BASE_URL || 'https://cms.carolinapanorama.org';
+    console.log('[Article Detail Widget] API Base URL:', apiBase);
+    
+    // Path to your 404 page on the main site
+    const notFoundUrl = '/404-page';
+
+    function slugify(str) {
+      return String(str || '')
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-');
+    }
+
+    function getSlugFromPath() {
+      // Try hash fragment: /article#slug
+      const hash = window.location.hash;
+      if (hash && hash.length > 1) {
+        const slug = decodeURIComponent(hash.substring(1));
+        console.log('[Article Detail Widget] Extracted slug from hash:', slug);
+        return slug;
+      }
+      
+      // Check for query parameter: /article?q=slug (fallback)
+      const urlParams = new URLSearchParams(window.location.search);
+      const querySlug = urlParams.get('q');
+      if (querySlug) {
+        const slug = decodeURIComponent(querySlug);
+        console.log('[Article Detail Widget] Extracted slug from query parameter:', querySlug);
+        return slug;
+      }
+      
+      console.warn('[Article Detail Widget] Could not extract slug. Expected: /article#slug or /article?q=slug');
+      return null;
+    }
+
+    function formatPublishDate(dateStr) {
+      if (!dateStr) return '';
+      try {
+        return new Date(dateStr).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      } catch (e) {
+        return dateStr;
+      }
+    }
+
+    function renderCategories(categories) {
+      if (!categories || !categories.length) return '';
+      const catLinks = categories.map(cat => {
+        const name = cat.name || '';
+        const slug = slugify(name);
+        const href = `/article-feed/category/${encodeURIComponent(slug)}`;
+        return `<a href="${href}">${name}</a>`;
+      });
+      return catLinks.join(' | ');
+    }
+
+    function calculateReadTime(content) {
+      if (!content) return 1;
+      // Strip HTML tags and count words
+      const text = content.replace(/<[^>]*>/g, ' ');
+      const words = text.trim().split(/\s+/).length;
+      // Average reading speed: 200 words per minute
+      const minutes = Math.ceil(words / 200);
+      return minutes > 0 ? minutes : 1;
+    }
+
+    function renderReadTimeAndDate(content, publishDate) {
+      const parts = [];
+      const readTime = calculateReadTime(content);
+      parts.push(`${readTime} min read`);
+      if (publishDate) {
+        parts.push(formatPublishDate(publishDate));
+      }
+      return parts.join(' \u2022 ');
+    }
+
+    function renderTags(tags) {
+      if (!tags || !tags.length) {
+        tagsSectionEl.style.display = 'none';
+        return;
+      }
+      tagsSectionEl.style.display = '';
+      tagsListEl.innerHTML = tags
+        .map(tag => {
+          const name = tag.name || '';
+          const slug = slugify(name);
+          const href = `/article-feed/tag/${encodeURIComponent(slug)}`;
+          return `<a class="article-tag-pill" href="${href}">${name}</a>`;
+        })
+        .join('');
+    }
+
+    function renderFeaturedImage(featured_image, featured_image_alt) {
+      if (!featured_image) {
+        featuredImageEl.style.display = 'none';
+        return;
+      }
+      featuredImageEl.style.display = '';
+      featuredImageImg.src = featured_image;
+      featuredImageImg.alt = featured_image_alt || '';
+      if (featured_image_alt) {
+        featuredImageCaption.textContent = featured_image_alt;
+        featuredImageCaption.style.display = '';
+      } else {
+        featuredImageCaption.style.display = 'none';
+      }
+    }
+
+    function renderAuthor(author) {
+      if (!author) {
+        authorCardEl.style.display = 'none';
+        return;
+      }
+      authorCardEl.style.display = '';
+
+      const name = author.name || 'Carolina Panorama';
+      const slug = slugify(name);
+      const href = `/article-feed/author/${encodeURIComponent(slug)}`;
+
+      authorNameEl.innerHTML = `<a href="${href}">${name}</a>`;
+      authorBioEl.textContent = author.bio || '';
+
+      // Avatar
+      while (authorAvatarEl.firstChild) {
+        authorAvatarEl.removeChild(authorAvatarEl.firstChild);
+      }
+      if (author.profile_image) {
+        const img = document.createElement('img');
+        img.src = author.profile_image;
+        img.alt = name;
+        authorAvatarEl.appendChild(img);
+      } else {
+        const initials = name
+          .split(/\s+/)
+          .map(part => part.charAt(0).toUpperCase())
+          .slice(0, 2)
+          .join('');
+        authorAvatarEl.textContent = initials || 'CP';
+      }
+
+      // Social links
+      authorSocialEl.innerHTML = '';
+      if (Array.isArray(author.social_links) && author.social_links.length) {
+        author.social_links.forEach(link => {
+          if (!link.url) return;
+          const a = document.createElement('a');
+          a.href = link.url;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          const platform = (link.platform || '').toString();
+          a.textContent = platform ? platform.charAt(0).toUpperCase() + platform.slice(1) : link.url;
+          authorSocialEl.appendChild(a);
+        });
+      }
+    }
+
+    async function loadArticle() {
+      console.log('[Article Detail Widget] Starting loadArticle()');
+      const slug = getSlugFromPath();
+      if (!slug) {
+        // If we can't determine the slug, send the user to a 404 page
+        console.error('[Article Detail Widget] No slug found, redirecting to 404');
+        window.location.href = notFoundUrl;
+        return;
+      }
+
+      const url = `${apiBase}/api/public/articles/slug/${encodeURIComponent(slug)}`;
+      console.log('[Article Detail Widget] Fetching article from:', url);
+      
+      try {
+        const res = await fetch(url);
+        console.log('[Article Detail Widget] Response status:', res.status);
+        
+        const json = await res.json();
+        console.log('[Article Detail Widget] Response data:', json);
+        
+        if (!json.success || !json.data) {
+          console.error('[Article Detail Widget] Article not found or invalid response');
+          window.location.href = notFoundUrl;
+          return;
+        }
+
+        const article = json.data;
+        const pageTitle = article.title || 'Article';
+        console.log('[Article Detail Widget] Rendering article:', pageTitle);
+        
+        titleEl.textContent = pageTitle;
+        // Update browser tab title using meta_title if available
+        if (article.meta_title) {
+          document.title = article.meta_title;
+        } else {
+          document.title = pageTitle + ' | Carolina Panorama';
+        }
+        
+        // Inject SEO meta tags for article
+        const keywords = [];
+        if (article.tags && article.tags.length > 0) {
+          keywords.push(...article.tags.map(tag => tag.name || tag));
+        }
+        if (article.categories && article.categories.length > 0) {
+          keywords.push(...article.categories.map(cat => cat.name || cat));
+        }
+        keywords.push('Carolina Panorama');
+        
+        window.CarolinaPanorama.setPageMeta({
+          title: article.meta_title || (pageTitle + ' | Carolina Panorama'),
+          description: article.meta_description || article.excerpt || '',
+          keywords: keywords.join(', '),
+          image: article.featured_image || '',
+          url: window.location.href,
+          type: 'article'
+        });
+        
+        metaEl.innerHTML = renderCategories(article.categories || []);
+        const readTimeDateEl = document.getElementById('cp-article-readtime-date');
+        readTimeDateEl.innerHTML = renderReadTimeAndDate(article.content, article.publish_date);
+        renderFeaturedImage(article.featured_image, article.featured_image_alt);
+        
+        // Clean up content by removing leading empty paragraphs
+        let content = article.content || '';
+        content = content.replace(/^(\s*<p>\s*<\/p>\s*)+/, '');
+        bodyEl.innerHTML = content;
+
+        renderTags(article.tags || []);
+        renderAuthor(article.author || null);
+        
+        console.log('[Article Detail Widget] Article rendered successfully');
+      } catch (e) {
+        console.error('[Article Detail Widget] Failed to load article:', e);
+        window.location.href = notFoundUrl;
+      }
+    }
+
+    backToTopBtn.addEventListener('click', function () {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    // Setup share buttons
+    function setupShareButtons() {
+      const shareButtons = document.querySelectorAll('.share-button');
+      
+      shareButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+          e.preventDefault();
+          
+          // Capture URL and title at click time to ensure they're current
+          const pageUrl = encodeURIComponent(window.location.href);
+          const pageTitle = encodeURIComponent(document.title);
+          const platform = this.getAttribute('data-platform');
+          let shareUrl = '';
+          
+          switch(platform) {
+            case 'facebook':
+              shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${pageUrl}`;
+              break;
+            case 'twitter':
+              shareUrl = `https://twitter.com/intent/tweet?url=${pageUrl}&text=${pageTitle}`;
+              break;
+            case 'linkedin':
+              shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${pageUrl}`;
+              break;
+            case 'reddit':
+              shareUrl = `https://www.reddit.com/submit?url=${pageUrl}&title=${pageTitle}`;
+              break;
+            case 'sms':
+              shareUrl = `sms:?&body=${pageTitle}%20${pageUrl}`;
+              break;
+            case 'email':
+              shareUrl = `mailto:?subject=${pageTitle}&body=${pageTitle}%0A%0A${pageUrl}`;
+              break;
+            case 'copy':
+              // Copy to clipboard
+              const url = decodeURIComponent(pageUrl);
+              if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(url).then(() => {
+                  // Visual feedback
+                  const originalTitle = this.getAttribute('title');
+                  this.setAttribute('title', 'Link Copied!');
+                  setTimeout(() => {
+                    this.setAttribute('title', originalTitle);
+                  }, 2000);
+                }).catch(err => {
+                  console.error('Failed to copy:', err);
+                  alert('Failed to copy link');
+                });
+              } else {
+                // Fallback for older browsers
+                alert('Copy this link: ' + url);
+              }
+              return;
+          }
+          
+          if (shareUrl) {
+            if (platform === 'email') {
+              window.location.href = shareUrl;
+            } else {
+              window.open(shareUrl, '_blank', 'width=600,height=400');
+            }
+          }
+        });
+      });
+    }
+
+    console.log('[Article Detail Widget] Initializing...');
+    loadArticle();
+    setupShareButtons();
+  });
+</script>
+    <?php
+    return ob_get_clean();
+}
+
+// Register shortcode
+add_shortcode( 'cp_article_detail', 'cp_shortcode_article_detail' );

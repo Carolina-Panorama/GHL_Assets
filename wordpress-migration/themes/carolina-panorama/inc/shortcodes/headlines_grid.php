@@ -1,0 +1,382 @@
+<?php
+/**
+ * Shortcode: cp_headlines_grid
+ * Widget: Headlines Grid
+ */
+
+function cp_shortcode_headlines_grid( $atts = [], $content = null, $tag = '' ) {
+    // Enqueue dependencies
+    wp_enqueue_script( 'cp-global-js' );
+    wp_enqueue_style( 'cp-article-card-styles' );
+
+    ob_start();
+    ?>
+<!-- Headlines Grid Widget - Displays 5 articles with featured layout -->
+<!-- Include shared-article-card-styles.css in your page -->
+
+<style>
+    .headlines-section-wrapper {
+        width: 100%;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .headlines-section-header {
+        text-align: center;
+        margin-bottom: 32px;
+        padding-bottom: 16px;
+        border-bottom: 3px solid #3b82f6;
+    }
+
+    .headlines-section-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-family: 'Georgia', serif;
+    }
+
+    .headlines-grid {
+        display: grid;
+        grid-template-columns: 1fr 2fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        gap: 20px;
+    }
+
+    /* Featured badge for center article */
+    .featured-badge {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        background: #dcb349;
+        color: white;
+        padding: 6px 14px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        z-index: 10;
+        box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+    }
+
+    /* Grid positioning */
+    .headlines-center {
+        grid-column: 2;
+        grid-row: 1 / 3;
+        position: relative;
+    }
+
+    .headlines-left-top {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    .headlines-left-bottom {
+        grid-column: 1;
+        grid-row: 2;
+    }
+
+    .headlines-right-top {
+        grid-column: 3;
+        grid-row: 1;
+    }
+
+    .headlines-right-bottom {
+        grid-column: 3;
+        grid-row: 2;
+    }
+
+    /* Responsive design */
+    @media (max-width: 1024px) {
+        .headlines-grid {
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto;
+        }
+
+        .headlines-center {
+            grid-column: 1 / 3;
+            grid-row: 1;
+        }
+
+        .headlines-left-top {
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        .headlines-left-bottom {
+            grid-column: 2;
+            grid-row: 2;
+        }
+
+        .headlines-right-top {
+            grid-column: 1;
+            grid-row: 3;
+        }
+
+        .headlines-right-bottom {
+            grid-column: 2;
+            grid-row: 3;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .headlines-section-header {
+            margin-bottom: 16px;
+        }
+
+        .headlines-section-title {
+            font-size: 1.5rem;
+        }
+
+        .headlines-grid {
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        .headlines-center,
+        .headlines-left-top,
+        .headlines-left-bottom,
+        .headlines-right-top,
+        .headlines-right-bottom {
+            grid-column: 1;
+            grid-row: auto;
+        }
+    }
+</style>
+
+<div class="headlines-section-wrapper">
+    <div class="headlines-section-header">
+        <h2 class="headlines-section-title">Top Headlines</h2>
+    </div>
+
+    <div class="headlines-grid">
+        <!-- Featured article (center) - index 0 -->
+        <div class="headlines-center">
+            <span class="featured-badge">Featured</span>
+            <article class="cp-article-card cp-article-card-featured">
+                <a href="#" class="cp-article-card-link" data-article-index="0">
+                    <img src="https://storage.googleapis.com/msgsndr/9Iv8kFcMiUgScXzMPv23/media/697bd8644d56831c95c3248d.svg" alt="Article" class="cp-article-image" fetchpriority="high" loading="eager">
+                    <div class="cp-article-content">
+                        <div class="cp-article-tags">
+                            <span class="cp-article-tag">Loading</span>
+                        </div>
+                        <h2 class="cp-article-title">Loading article...</h2>
+                        <div class="cp-article-meta">
+                            <span class="cp-article-author">Carolina Panorama</span>
+                            <span class="cp-article-date">Today</span>
+                        </div>
+                        <p class="cp-article-description">Please wait while we load the content...</p>
+                    </div>
+                </a>
+            </article>
+        </div>
+
+        <!-- Side articles - indices 1-4 -->
+        <div class="headlines-left-top">
+            <article class="cp-article-card cp-article-card-small">
+                <a href="#" class="cp-article-card-link" data-article-index="1">
+                    <img src="https://storage.googleapis.com/msgsndr/9Iv8kFcMiUgScXzMPv23/media/697bd8644d56831c95c3248d.svg" alt="Article" class="cp-article-image" fetchpriority="high" loading="eager">
+                    <div class="cp-article-content">
+                        <div class="cp-article-tags">
+                            <span class="cp-article-tag">Loading</span>
+                        </div>
+                        <h3 class="cp-article-title">Loading...</h3>
+                        <div class="cp-article-meta">
+                            <span class="cp-article-author">Carolina Panorama</span>
+                            <span class="cp-article-date">Today</span>
+                        </div>
+                    </div>
+                </a>
+            </article>
+        </div>
+
+        <div class="headlines-left-bottom">
+            <article class="cp-article-card cp-article-card-small">
+                <a href="#" class="cp-article-card-link" data-article-index="2">
+                    <img src="https://storage.googleapis.com/msgsndr/9Iv8kFcMiUgScXzMPv23/media/697bd8644d56831c95c3248d.svg" alt="Article" class="cp-article-image" fetchpriority="high" loading="eager">
+                    <div class="cp-article-content">
+                        <div class="cp-article-tags">
+                            <span class="cp-article-tag">Loading</span>
+                        </div>
+                        <h3 class="cp-article-title">Loading...</h3>
+                        <div class="cp-article-meta">
+                            <span class="cp-article-author">Carolina Panorama</span>
+                            <span class="cp-article-date">Today</span>
+                        </div>
+                    </div>
+                </a>
+            </article>
+        </div>
+
+        <div class="headlines-right-top">
+            <article class="cp-article-card cp-article-card-small">
+                <a href="#" class="cp-article-card-link" data-article-index="3">
+                    <img src="https://storage.googleapis.com/msgsndr/9Iv8kFcMiUgScXzMPv23/media/697bd8644d56831c95c3248d.svg" alt="Article" class="cp-article-image" fetchpriority="high" loading="eager">
+                    <div class="cp-article-content">
+                        <div class="cp-article-tags">
+                            <span class="cp-article-tag">Loading</span>
+                        </div>
+                        <h3 class="cp-article-title">Loading...</h3>
+                        <div class="cp-article-meta">
+                            <span class="cp-article-author">Carolina Panorama</span>
+                            <span class="cp-article-date">Today</span>
+                        </div>
+                    </div>
+                </a>
+            </article>
+        </div>
+
+        <div class="headlines-right-bottom">
+            <article class="cp-article-card cp-article-card-small">
+                <a href="#" class="cp-article-card-link" data-article-index="4">
+                    <img src="https://storage.googleapis.com/msgsndr/9Iv8kFcMiUgScXzMPv23/media/697bd8644d56831c95c3248d.svg" alt="Article" class="cp-article-image" fetchpriority="high" loading="eager">
+                    <div class="cp-article-content">
+                        <div class="cp-article-tags">
+                            <span class="cp-article-tag">Loading</span>
+                        </div>
+                        <h3 class="cp-article-title">Loading...</h3>
+                        <div class="cp-article-meta">
+                            <span class="cp-article-author">Carolina Panorama</span>
+                            <span class="cp-article-date">Today</span>
+                        </div>
+                    </div>
+                </a>
+            </article>
+        </div>
+    </div>
+</div>
+
+    <script>
+    // Wait for CarolinaPanorama global before running widget logic
+    function waitForCarolinaPanorama(callback, timeout = 5000) {
+        const start = Date.now();
+        (function check() {
+            if (window.CarolinaPanorama) {
+                callback();
+            } else if (Date.now() - start < timeout) {
+                setTimeout(check, 30);
+            } else {
+                console.error('CarolinaPanorama global not found.');
+            }
+        })();
+    }
+
+    waitForCarolinaPanorama(function() {
+        const apiBase = window.CarolinaPanorama.API_BASE_URL || 'https://cms.carolinapanorama.org';
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            try {
+                const options = { month: 'short', day: 'numeric', year: 'numeric' };
+                return new Date(dateStr).toLocaleDateString('en-US', options);
+            } catch (e) {
+                return dateStr;
+            }
+        }
+
+        function slugify(str) {
+            return String(str || '')
+                .toLowerCase()
+                .trim()
+                .replace(/[^a-z0-9\s-]/g, '')
+                .replace(/\s+/g, '-');
+        }
+
+        // Update a single article card
+        async function updateArticleCard(linkElement, article) {
+            linkElement.href = article.url;
+
+            const image = linkElement.querySelector('.cp-article-image');
+            image.classList.add('is-loading');
+            
+            // Use image URL directly (Cloudflare handles optimization)
+            const placeholderUrl = 'https://storage.googleapis.com/msgsndr/9Iv8kFcMiUgScXzMPv23/media/697bd8644d56831c95c3248d.svg';
+            const imageUrl = article.featured_image || placeholderUrl;
+
+            image.addEventListener('load', () => {
+                image.classList.remove('is-loading');
+            }, { once: true });
+            image.src = imageUrl;
+            image.alt = article.featured_image_alt || article.title;
+            
+            const tagsContainer = linkElement.querySelector('.cp-article-tags');
+            if (article.categories && article.categories.length) {
+                const categoryTags = await Promise.all(
+                    article.categories.slice(0, 2).map(async cat => {
+                        const catName = cat.name || cat;
+                        const catClass = slugify(catName);
+                        const style = await window.CarolinaPanorama.getCategoryStyle(catName);
+                        return `<span class="cp-article-tag ${catClass}" style="${style}">${catName}</span>`;
+                    })
+                );
+                tagsContainer.innerHTML = categoryTags.join('');
+            }
+            
+            const title = linkElement.querySelector('.cp-article-title');
+            title.textContent = article.title;
+            
+            const meta = linkElement.querySelector('.cp-article-meta');
+            let authorSpan = meta.querySelector('.cp-article-author');
+            const dateSpan = meta.querySelector('.cp-article-date');
+            
+            if (!authorSpan && dateSpan) {
+                authorSpan = document.createElement('span');
+                authorSpan.className = 'cp-article-author';
+                meta.insertBefore(authorSpan, dateSpan);
+            }
+            if (authorSpan) {
+                const authorName = article.author?.name || 'Carolina Panorama';
+                authorSpan.textContent = authorName;
+            }
+            if (dateSpan) {
+                dateSpan.textContent = formatDate(article.publish_date);
+            }
+            
+            const description = linkElement.querySelector('.cp-article-description');
+            if (description && article.excerpt) {
+                description.textContent = article.excerpt;
+            }
+        }
+
+        // Fetch and initialize all articles from new headlines API
+        async function initializeGrid() {
+            try {
+                const url = `${apiBase}/api/public/headlines`;
+                console.log('[Headlines Grid] Fetching from:', url);
+                
+                const res = await fetch(url);
+                const json = await res.json();
+                
+                if (!json.success || !json.data || json.data.length === 0) {
+                    console.error('[Headlines Grid] No articles returned from API');
+                    return;
+                }
+                
+                const articles = json.data;
+                const edition = json.edition;
+                console.log(`[Headlines Grid] Loaded ${articles.length} articles from edition: ${edition || 'N/A'}`);
+                
+                const articleLinks = document.querySelectorAll('.cp-article-card-link');
+                for (let index = 0; index < articleLinks.length; index++) {
+                    if (articles[index]) {
+                        await updateArticleCard(articleLinks[index], articles[index]);
+                    }
+                }
+            } catch (e) {
+                console.error('[Headlines Grid] Failed to load articles:', e);
+            }
+        }
+
+        initializeGrid();
+    });
+</script>
+    <?php
+    return ob_get_clean();
+}
+
+// Register shortcode
+add_shortcode( 'cp_headlines_grid', 'cp_shortcode_headlines_grid' );

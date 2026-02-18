@@ -1,0 +1,522 @@
+<?php
+/**
+ * Shortcode: cp_article_list_feed
+ * Widget: Article List Feed
+ */
+
+function cp_shortcode_article_list_feed( $atts = [], $content = null, $tag = '' ) {
+    // Enqueue dependencies
+    wp_enqueue_script( 'cp-global-js' );
+    wp_enqueue_style( 'cp-article-card-styles' );
+
+    // Shortcode attributes with defaults
+    $atts = shortcode_atts( [ 'category' => '', 'limit' => 6 ], $atts, 'cp_article_list_feed' );
+
+    ob_start();
+    ?>
+<!-- Article List Feed Widget -->
+<!-- Include shared-article-card-styles.css in your page -->
+<!-- This widget displays articles in a vertical list layout matching the screenshot -->
+
+<style>
+    .article-list-feed-wrapper {
+        width: 100%;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: clamp(12px, 1.6vw, 20px);
+    }
+
+    .article-list-container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    /* Featured article card */
+    .featured-article-item {
+        display: block;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .featured-article-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .featured-article-card {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        align-items: stretch;
+        border-radius: 8px;
+        overflow: hidden;
+        background: white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        max-height: 280px;
+    }
+
+    .featured-article-link {
+        display: contents;
+    }
+
+    .featured-image-container {
+        overflow: hidden;
+        background: #f3f4f6;
+        border-radius: 8px 0 0 8px;
+    }
+
+    .featured-image-container img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        object-position: center;
+    }
+
+    .featured-content {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 19px;
+        gap: 10px;
+    }
+
+    .featured-section-header {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 0 0 12px 0;
+    }
+
+    .featured-article-title {
+        font-size: 1.12rem;
+        line-height: 1.4;
+        margin: 0;
+        font-weight: 700;
+        color: #1a202c;
+    }
+
+    .featured-article-item:hover .featured-article-title {
+        color: #003366;
+    }
+
+    .featured-article-meta {
+        margin: 0;
+        font-size: 0.85rem;
+        color: #6b7280;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .featured-article-description {
+        margin: 0;
+        font-size: 0.76rem;
+        color: #4b5563;
+        line-height: 1.5;
+    }
+
+    /* Condensed list section */
+    .condensed-list-section {
+        border-top: 1px solid #e5e7eb;
+        padding-top: 20px;
+    }
+
+    .condensed-list-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 0 0 12px 0;
+        padding: 0 8px;
+    }
+
+    /* Condensed list layout */
+    .article-list-item {
+        display: block;
+        transition: background-color 0.15s ease;
+    }
+
+    .article-list-item:hover {
+        background-color: #f9fafb;
+    }
+
+    .article-list-item .cp-article-card {
+        display: grid;
+        grid-template-columns: 50px 1fr;
+        gap: 12px;
+        align-items: start;
+        padding: 12px 8px;
+        box-shadow: none;
+        border-radius: 0;
+    }
+
+    .article-list-item .cp-article-card-link {
+        display: contents;
+    }
+
+    /* Number badge */
+    .article-number {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #9ca3af;
+        text-align: center;
+        padding-top: 2px;
+        flex-shrink: 0;
+    }
+
+    .article-list-item:hover .article-number {
+        color: #003366;
+    }
+
+    .article-list-item .cp-article-content {
+        padding: 0;
+        gap: 4px;
+        min-width: 0;
+    }
+
+    /* Category tags - hide since grouped by category */
+    .article-list-item .cp-article-tags {
+        display: none;
+    }
+
+    .article-list-item .cp-article-tag {
+        font-size: 0.7rem;
+        padding: 3px 8px;
+        white-space: nowrap;
+        width: 100%;
+        text-align: center;
+        box-sizing: border-box;
+    }
+
+    /* Title - single line with truncation */
+    .article-list-item .cp-article-title {
+        font-size: 0.95rem;
+        line-height: 1.3;
+        margin: 0;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: #1a202c;
+    }
+
+    .article-list-item:hover .cp-article-title {
+        color: #003366;
+    }
+
+    /* Meta - compact inline */
+    .article-list-item .cp-article-meta {
+        margin: 0;
+        font-size: 0.75rem;
+        color: #6b7280;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .article-list-item .cp-article-author::before {
+        content: none;
+    }
+
+    /* Hide image, description, and read more in condensed view */
+    .article-list-item .cp-article-image,
+    .article-list-item .cp-article-description,
+    .article-list-item .cp-article-read-more {
+        display: none;
+    }
+
+    /* Separator between articles */
+    .article-list-item:not(:last-child) {
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+        .featured-article-card {
+            grid-template-columns: 1fr;
+        }
+
+        .featured-image-container {
+            border-radius: 8px 8px 0 0;
+            min-height: 200px;
+        }
+
+        .featured-content {
+            padding: 16px;
+        }
+
+        .featured-article-title {
+            font-size: 1.2rem;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .article-list-item .cp-article-card {
+            grid-template-columns: 40px 1fr;
+            gap: 8px;
+        }
+
+        .article-number {
+            font-size: 0.9rem;
+        }
+
+        .article-list-item .cp-article-tags {
+            grid-column: 2;
+            flex-direction: row;
+            flex-wrap: wrap;
+            min-width: auto;
+            max-width: none;
+            margin-bottom: 4px;
+        }
+
+        .article-list-item .cp-article-tag {
+            width: auto;
+        }
+
+        .article-list-item .cp-article-content {
+            grid-column: 2;
+        }
+
+        .article-list-item .cp-article-title {
+            font-size: 0.9rem;
+        }
+    }
+</style>
+
+<div class="article-list-feed-wrapper">
+    <div class="article-list-container" id="article-list-container">
+        <!-- Loading state -->
+        <div class="featured-article-item">
+            <article class="featured-article-card">
+                <div class="featured-image-container" style="background: #f7fafc; display: flex; align-items: center; justify-content: center; color: #9ca3af;">
+                    Loading...
+                </div>
+                <div class="featured-content">
+                    <div class="featured-article-tags">
+                        <span class="featured-article-tag">Loading</span>
+                    </div>
+                    <h2 class="featured-article-title">Loading featured article...</h2>
+                    <div class="featured-article-meta">
+                        <span>Carolina Panorama</span>
+                        <span>Today</span>
+                    </div>
+                    <p class="featured-article-description">Please wait while we load the latest content...</p>
+                </div>
+            </article>
+        </div>
+    </div>
+</div>
+
+<script>
+// Wait for CarolinaPanorama global before running widget logic
+function waitForCarolinaPanorama(callback, timeout = 5000) {
+    const start = Date.now();
+    (function check() {
+        if (window.CarolinaPanorama) {
+            callback();
+        } else if (Date.now() - start < timeout) {
+            setTimeout(check, 30);
+        } else {
+            console.error('CarolinaPanorama global not found.');
+        }
+    })();
+}
+
+waitForCarolinaPanorama(function() {
+    const container = document.getElementById('article-list-container');
+    const CATEGORIES = ['Local News', 'Business', 'Sports', 'Education', 'Culture'];
+    const ARTICLES_PER_CATEGORY = 3;
+    const FEATURED_ARTICLES = 1;
+    const CONDENSED_ARTICLES = 2;
+    const CACHE_KEY = 'cp_homepage_feed_cache_v2';
+    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+    // Use global CarolinaPanorama helpers
+    const apiBase = window.CarolinaPanorama.API_BASE_URL || 'https://cms.carolinapanorama.org';
+    
+    function formatDate(date) {
+        const options = { month: 'numeric', day: 'numeric', year: 'numeric' };
+        return 'Published on: ' + new Date(date).toLocaleDateString('en-US', options);
+    }
+
+    // Create featured article card HTML with category header
+    async function createFeaturedArticleCard(data, categoryName) {
+        const imageUrl = data.image || 'https://storage.googleapis.com/msgsndr/9Iv8kFcMiUgScXzMPv23/media/697bd8644d56831c95c3248d.svg';
+        
+        return `
+            <div>
+                <h3 class="featured-section-header">${categoryName}</h3>
+                <div class="featured-article-item">
+                    <a href="${data.url}" class="featured-article-link">
+                        <article class="featured-article-card">
+                            <div class="featured-image-container">
+                                <img src="${imageUrl}" alt="${data.title}" />
+                            </div>
+                            <div class="featured-content">
+                                <h2 class="featured-article-title">${data.title}</h2>
+                                <div class="featured-article-meta">
+                                    <span>${data.author}</span>
+                                    <span>${formatDate(data.date)}</span>
+                                </div>
+                                <p class="featured-article-description">${data.description}</p>
+                            </div>
+                        </article>
+                    </a>
+                </div>
+            </div>
+        `;
+    }
+
+    // Create condensed article card HTML
+    async function createCondensedArticleCard(data, index) {
+        return `
+            <div class="article-list-item">
+                <article class="cp-article-card">
+                    <a href="${data.url}" class="cp-article-card-link">
+                        <div class="article-number">${index + 1}.</div>
+                        <div class="cp-article-content">
+                            <h2 class="cp-article-title" title="${data.title}">${data.title}</h2>
+                            <div class="cp-article-meta">
+                                <span class="cp-article-author">${data.author}</span>
+                                <span class="cp-article-date">${formatDate(data.date)}</span>
+                            </div>
+                        </div>
+                    </a>
+                </article>
+            </div>
+        `;
+    }
+
+    // Fetch articles by category with caching
+    async function fetchCategoryArticles(category) {
+        const url = `${apiBase}/api/public/articles?category=${encodeURIComponent(category)}&per_page=${ARTICLES_PER_CATEGORY}&page=1`;
+        
+        const res = await fetch(url);
+        const json = await res.json();
+        
+        if (!json.success || !Array.isArray(json.data)) {
+            return [];
+        }
+        
+        const articles = json.data.map(article => ({
+            url: article.url || (article.slug ? `/article#${encodeURIComponent(article.slug)}` : ''),
+            title: article.title,
+            description: article.excerpt || '',
+            image: article.featured_image,
+            author: article.author && article.author.name ? article.author.name : '',
+            date: article.publish_date,
+            categories: Array.isArray(article.categories) && article.categories.length > 0
+                ? article.categories.map(cat => cat.name)
+                : [category]
+        }));
+        
+        // Filter out articles without valid dates
+        const validArticles = articles.filter(article => article.date);
+        
+        // Sort by most recent publish date
+        validArticles.sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        return validArticles;
+    }
+
+    // Fetch all articles with caching
+    async function fetchAllArticles() {
+        // Check localStorage cache first
+        try {
+            const cached = localStorage.getItem(CACHE_KEY);
+            if (cached) {
+                const { data, timestamp } = JSON.parse(cached);
+                const age = Date.now() - timestamp;
+                
+                if (age < CACHE_DURATION) {
+                    console.log('[Article List Feed] Loaded from cache (age:', Math.round(age / 1000), 'seconds)');
+                    return data;
+                }
+                // Cache expired
+                localStorage.removeItem(CACHE_KEY);
+            }
+        } catch (e) {
+            console.warn('[Article List Feed] Failed to read cache:', e);
+        }
+        
+        // Fetch fresh data from API
+        console.log('[Article List Feed] Fetching fresh data from API...');
+        const allArticles = {};
+        
+        for (const category of CATEGORIES) {
+            try {
+                const articles = await fetchCategoryArticles(category);
+                if (articles.length > 0) {
+                    allArticles[category] = articles;
+                }
+            } catch (e) {
+                console.error(`[Article List Feed] Failed to load ${category}:`, e);
+            }
+        }
+        
+        // Cache the results
+        try {
+            localStorage.setItem(CACHE_KEY, JSON.stringify({
+                data: allArticles,
+                timestamp: Date.now()
+            }));
+            console.log('[Article List Feed] Cached', Object.keys(allArticles).length, 'categories');
+        } catch (e) {
+            console.warn('[Article List Feed] Failed to cache results:', e);
+        }
+        
+        return allArticles;
+    }
+
+    // Initialize feed
+    async function initializeFeed() {
+        const allArticles = await fetchAllArticles();
+        let html = '';
+        
+        // Build sections from cached or fresh data
+        for (const category of CATEGORIES) {
+            const categoryArticles = allArticles[category];
+            if (!categoryArticles || categoryArticles.length === 0) continue;
+            
+            // Find article with image for featured card
+            const featuredArticle = categoryArticles.find(article => article.image);
+            const condensedArticles = categoryArticles.filter(article => article !== featuredArticle).slice(0, CONDENSED_ARTICLES);
+            
+            // Build section if we have at least the featured article
+            if (featuredArticle) {
+                html += `<div style="margin-bottom: 32px;">`;
+                html += await createFeaturedArticleCard(featuredArticle, category);
+                
+                if (condensedArticles.length > 0) {
+                    html += '<div class="condensed-list-section" style="margin-top: 20px;">';
+                    const condensedCardsHTML = await Promise.all(
+                        condensedArticles.map((data, index) => createCondensedArticleCard(data, index))
+                    );
+                    html += condensedCardsHTML.join('');
+                    html += '</div>';
+                }
+                html += '</div>';
+            }
+        }
+
+        if (!html) {
+            container.innerHTML = '<p style="text-align: center; color: #666;">No articles found.</p>';
+            return;
+        }
+
+        container.innerHTML = html;
+    }
+
+    // Initialize on page load
+    initializeFeed();
+});
+</script>
+    <?php
+    return ob_get_clean();
+}
+
+// Register shortcode
+add_shortcode( 'cp_article_list_feed', 'cp_shortcode_article_list_feed' );

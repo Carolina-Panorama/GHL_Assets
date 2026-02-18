@@ -1,0 +1,119 @@
+<?php
+/**
+ * Shortcode: cp_category_grid
+ * Widget: Category Grid
+ */
+
+function cp_shortcode_category_grid( $atts = [], $content = null, $tag = '' ) {
+    // Enqueue dependencies
+    wp_enqueue_script( 'cp-global-js' );
+
+    ob_start();
+    ?>
+<!-- Category Grid Widget -->
+<style>
+.category-grid-widget {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: clamp(12px, 1.6vw, 20px);
+}
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 5px;
+}
+.category-grid-item {
+  background: #dbeafe;
+  border-radius: 12px;
+  padding: 12px 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1e2761;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
+}
+.category-grid-item:hover {
+  background: #003366;
+  color: #fff;
+}
+@media (max-width: 700px) {
+  .category-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 480px) {
+  .category-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+<div class="category-grid-widget">
+  <div class="category-grid" id="category-grid-list">
+    <!-- Categories will be loaded here -->
+  </div>
+</div>
+<script>
+function waitForLibrariesAndInitCategoryGrid(callback, timeout = 10000) {
+  const start = Date.now();
+  (function poll() {
+    // Example: wait for window.CarolinaPanorama or any other global
+    if (window.CarolinaPanorama) {
+      callback();
+    } else if (Date.now() - start < timeout) {
+      setTimeout(poll, 30);
+    } else {
+      console.error('Required libraries not found for category grid widget.');
+    }
+  })();
+}
+
+async function fetchCategories() {
+  const apiUrl = 'https://cms.carolinapanorama.org/api/public/categories';
+  try {
+    const res = await fetch(apiUrl);
+    const response = await res.json();
+    if (!response.success) {
+      console.error('Failed to fetch categories:', response.error);
+      return [];
+    }
+    // Map to the format expected by renderCategoryGrid
+    return response.data.map(cat => ({
+      urlSlug: cat.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+      label: cat.name
+    }));
+  } catch (e) {
+    console.error('Failed to fetch categories:', e);
+    return [];
+  }
+}
+
+function renderCategoryGrid(categories) {
+  const grid = document.getElementById('category-grid-list');
+  if (!grid) return;
+  grid.innerHTML = '';
+  categories.forEach(cat => {
+    const a = document.createElement('a');
+    a.className = 'category-grid-item';
+    a.href = `https://carolinapanorama.com/article-feed/category/${cat.urlSlug}`;
+    a.textContent = cat.label;
+    a.setAttribute('tabindex', '0');
+    grid.appendChild(a);
+  });
+}
+
+waitForLibrariesAndInitCategoryGrid(async function() {
+  const categories = await fetchCategories();
+  renderCategoryGrid(categories);
+});
+</script>
+    <?php
+    return ob_get_clean();
+}
+
+// Register shortcode
+add_shortcode( 'cp_category_grid', 'cp_shortcode_category_grid' );
