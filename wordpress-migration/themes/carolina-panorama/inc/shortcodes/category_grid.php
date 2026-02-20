@@ -2,11 +2,23 @@
 /**
  * Shortcode: cp_category_grid
  * Widget: Category Grid
+ *
+ * Renders a grid of WP categories using native get_terms() and term meta
+ * (_color_code) — no external API calls.
  */
 
 function cp_shortcode_category_grid( $atts = [], $content = null, $tag = '' ) {
-    // Enqueue dependencies
-    wp_enqueue_script( 'cp-global-js' );
+
+    $terms = get_terms( [
+        'taxonomy'   => 'category',
+        'hide_empty' => true,
+        'orderby'    => 'name',
+        'order'      => 'ASC',
+    ] );
+
+    if ( is_wp_error( $terms ) || empty( $terms ) ) {
+        return '';
+    }
 
     ob_start();
     ?>
@@ -53,64 +65,21 @@ function cp_shortcode_category_grid( $atts = [], $content = null, $tag = '' ) {
 }
 </style>
 <div class="category-grid-widget">
-  <div class="category-grid" id="category-grid-list">
-    <!-- Categories will be loaded here -->
+  <div class="category-grid">
+    <?php foreach ( $terms as $term ) :
+        $color = get_term_meta( $term->term_id, '_color_code', true );
+        $style = $color ? 'background-color:' . esc_attr( $color ) . ';color:#fff;' : '';
+        // Archive URL: /articles/category/{slug}  (handled by CPT rewrite rules)
+        $href  = esc_url( home_url( '/articles/category/' . $term->slug . '/' ) );
+    ?>
+      <a class="category-grid-item" href="<?php echo $href; ?>"
+         style="<?php echo $style; ?>"
+         tabindex="0">
+        <?php echo esc_html( $term->name ); ?>
+      </a>
+    <?php endforeach; ?>
   </div>
 </div>
-<script>
-function waitForLibrariesAndInitCategoryGrid(callback, timeout = 10000) {
-  const start = Date.now();
-  (function poll() {
-    // Example: wait for window.CarolinaPanorama or any other global
-    if (window.CarolinaPanorama) {
-      callback();
-    } else if (Date.now() - start < timeout) {
-      setTimeout(poll, 30);
-    } else {
-      console.error('Required libraries not found for category grid widget.');
-    }
-  })();
-}
-
-async function fetchCategories() {
-  const apiUrl = 'https://cms.carolinapanorama.org/api/public/categories';
-  try {
-    const res = await fetch(apiUrl);
-    const response = await res.json();
-    if (!response.success) {
-      console.error('Failed to fetch categories:', response.error);
-      return [];
-    }
-    // Map to the format expected by renderCategoryGrid
-    return response.data.map(cat => ({
-      urlSlug: cat.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-      label: cat.name
-    }));
-  } catch (e) {
-    console.error('Failed to fetch categories:', e);
-    return [];
-  }
-}
-
-function renderCategoryGrid(categories) {
-  const grid = document.getElementById('category-grid-list');
-  if (!grid) return;
-  grid.innerHTML = '';
-  categories.forEach(cat => {
-    const a = document.createElement('a');
-    a.className = 'category-grid-item';
-    a.href = `https://carolinapanorama.com/article-feed/category/${cat.urlSlug}`;
-    a.textContent = cat.label;
-    a.setAttribute('tabindex', '0');
-    grid.appendChild(a);
-  });
-}
-
-waitForLibrariesAndInitCategoryGrid(async function() {
-  const categories = await fetchCategories();
-  renderCategoryGrid(categories);
-});
-</script>
     <?php
     return ob_get_clean();
 }

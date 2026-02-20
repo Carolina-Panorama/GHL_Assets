@@ -253,197 +253,196 @@ function waitForCarolinaPanorama(callback, timeout = 5000) {
 }
 
 waitForCarolinaPanorama(function() {
-    const container = document.getElementById('article-feed-container');
+    const container  = document.getElementById('article-feed-container');
     const pagination = document.getElementById('article-feed-pagination');
-    const categoryLabelDiv = document.getElementById('category-title');
     const ARTICLES_PER_PAGE = 10;
-    let currentPage = 1;
-    let totalCount = 0;
-    let currentFilter = {};
+    let currentPage  = 1;
+    let totalCount   = 0;
 
-    const apiBase = window.CarolinaPanorama.API_BASE_URL || 'https://cms.carolinapanorama.org';
+    // WP REST API base (injected by PHP via CarolinaPanoramaConfig)
+    const restBase = window.CarolinaPanorama.WP_REST_URL; // e.g. /wp-json
+    const restNonce = window.CarolinaPanorama.WP_NONCE || '';
 
-    // Simple slug helper to match names coming from API
+    // ── URL filter helpers ──────────────────────────────────────────────────
+
     function slugify(str) {
-        return String(str || '')
-            .toLowerCase()
-            .trim()
-            .replace(/[^a-z0-9\s-]/g, '')
-            .replace(/\s+/g, '-');
+        return String(str || '').toLowerCase().trim()
+            .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
     }
 
-    let categoriesCache = null;
-    let authorsCache = null;
-
-    async function ensureCategories() {
-        if (categoriesCache) return categoriesCache;
-        try {
-            const res = await fetch(`${apiBase}/api/public/categories`);
-            const json = await res.json();
-            if (json.success && Array.isArray(json.data)) {
-                categoriesCache = json.data;
-            } else {
-                categoriesCache = [];
-            }
-        } catch (e) {
-            console.error('Failed to load categories from CMS:', e);
-            categoriesCache = [];
-        }
-        return categoriesCache;
-    }
-
-    async function ensureAuthors() {
-        if (authorsCache) return authorsCache;
-        try {
-            const res = await fetch(`${apiBase}/api/public/authors`);
-            const json = await res.json();
-            if (json.success && Array.isArray(json.data)) {
-                authorsCache = json.data;
-            } else {
-                authorsCache = [];
-            }
-        } catch (e) {
-            console.error('Failed to load authors from CMS:', e);
-            authorsCache = [];
-        }
-        return authorsCache;
-    }
-
-    // Utility to get filter from URL (category or tag)
     function getFilterFromUrl() {
-        const path = window.location.pathname;
-        const matchCategory = path.match(/\/category\/([^\/]+)/);
-        const matchTag = path.match(/\/tag\/([^\/]+)/);
-        const matchAuthor = path.match(/\/author\/([^\/]+)/);
-        if (matchCategory) {
-            return { categoryUrlSlug: decodeURIComponent(matchCategory[1].replace(/\+/g, ' ')) };
-        } else if (matchTag) {
-            // Tags may have spaces encoded as %20 or +
-            return { tag: decodeURIComponent(matchTag[1].replace(/\+/g, ' ')) };
-        } else if (matchAuthor) {
-            return { author: decodeURIComponent(matchAuthor[1].replace(/\+/g, ' ')) };
-        }
+        const path        = window.location.pathname;
+        const queryParams = new URLSearchParams(window.location.search);
+
+        const matchCategory = path.match(/\/articles\/category\/([^\/]+)/);
+        const matchTag      = path.match(/\/articles\/tag\/([^\/]+)/);
+        const matchAuthor   = path.match(/\/articles\/author\/([^\/]+)/);
+
+        if (matchCategory) return { categorySlug: decodeURIComponent(matchCategory[1]) };
+        if (matchTag)      return { tag:          decodeURIComponent(matchTag[1]) };
+        if (matchAuthor)   return { authorSlug:   decodeURIComponent(matchAuthor[1]) };
+
+        if (queryParams.has('category')) return { categorySlug: queryParams.get('category') };
+        if (queryParams.has('tag'))      return { tag:          queryParams.get('tag') };
+        if (queryParams.has('author'))   return { authorSlug:   queryParams.get('author') };
+
         return {};
     }
 
-    // Fetch articles for current page and filter from CMS public API
-    async function fetchArticles(page = 1) {
-        currentFilter = getFilterFromUrl();
-        const params = new URLSearchParams();
-        params.set('page', String(page));
-        params.set('per_page', String(ARTICLES_PER_PAGE));
+    // ── WP REST fetchers ────────────────────────────────────────────────────
 
-        let categoryDetails = null;
-        let authorDetails = null;
+    const restHeaders = restNonce ? { 'X-WP-Nonce': restNonce } : {};
 
-        if (currentFilter.categoryUrlSlug) {
-            const slug = currentFilter.categoryUrlSlug;
-            const cats = await ensureCategories();
-            const match = cats.find(c => slugify(c.name) === slug);
-            if (match) {
-                params.set('category', match.name);
-                // Include description for SEO
-                categoryDetails = { 
-                    label: match.name,
-                    description: match.description || ''
-                };
-            }
+    // Resolve a category slug → { id, name, description, color_code }
+    async function resolveCategoryBySlug(slug) {
+        try {
+            const res  = await fetch(`${restBase}/wp/v2/categories?slug=${encodeURIComponent(slug)}&_fields=id,name,slug,description,meta`, { headers: restHeaders });
+            const data = await res.json();
+            if (!Array.isArray(data) || !data.length) return null;
+            const cat = data[0];
+            return {
+                id:          cat.id,
+                name:        cat.name,
+                slug:        cat.slug,
+                description: cat.description || '',
+                color_code:  (cat.meta && cat.meta._color_code) ? cat.meta._color_code : '',
+            };
+        } catch (e) {
+            console.error('[Article Feed] Failed to resolve category:', e);
+            return null;
         }
-
-        if (currentFilter.tag) {
-            // Interpret slug-ish tag from URL as tag name
-            const tagName = decodeURIComponent(currentFilter.tag).replace(/-/g, ' ');
-            params.set('tag', tagName);
-        }
-
-        if (currentFilter.author) {
-            const slug = currentFilter.author;
-            const authors = await ensureAuthors();
-            const match = authors.find(a => slugify(a.name) === slug);
-            if (match) {
-                params.set('author_id', String(match.id));
-                // Include bio for SEO
-                authorDetails = { 
-                    name: match.name,
-                    bio: match.bio || ''
-                };
-            }
-        }
-
-        const url = `${apiBase}/api/public/articles?${params.toString()}`;
-        const response = await fetch(url);
-        const data = await response.json();
-        if (!data.success || !Array.isArray(data.data)) {
-            totalCount = 0;
-            return { articles: [], categoryDetails, authorDetails };
-        }
-        const paginationInfo = data.pagination || {};
-        totalCount = paginationInfo.total || data.data.length || 0;
-
-        return {
-            articles: data.data.map(article => ({
-                url: article.slug ? `/article#${encodeURIComponent(article.slug)}` : '',
-                title: article.title,
-                description: article.excerpt || '',
-                image: article.featured_image || "https://storage.googleapis.com/msgsndr/9Iv8kFcMiUgScXzMPv23/media/697bd8644d56831c95c3248d.svg",
-                author: article.author && article.author.name ? article.author.name : '',
-                date: article.publish_date,
-                categories: Array.isArray(article.categories) && article.categories.length > 0
-                    ? article.categories.map(cat => cat.name)
-                    : ['News']
-            })),
-            categoryDetails,
-            authorDetails
-        };
     }
 
-    // Render articles
+    // Resolve an author slug → { id, name, description }
+    async function resolveAuthorBySlug(slug) {
+        try {
+            const res  = await fetch(`${restBase}/wp/v2/users?slug=${encodeURIComponent(slug)}&_fields=id,name,slug,description`, { headers: restHeaders });
+            const data = await res.json();
+            if (!Array.isArray(data) || !data.length) return null;
+            return { id: data[0].id, name: data[0].name, bio: data[0].description || '' };
+        } catch (e) {
+            console.error('[Article Feed] Failed to resolve author:', e);
+            return null;
+        }
+    }
+
+    // Fetch articles page from WP REST API
+    async function fetchArticles(page = 1) {
+        const filter = getFilterFromUrl();
+        const params = new URLSearchParams();
+        params.set('post_type', 'article');   // custom post type
+        params.set('per_page', String(ARTICLES_PER_PAGE));
+        params.set('page', String(page));
+        params.set('_embed', '1');            // embeds featured media + author + terms
+        params.set('_fields', 'id,title,excerpt,slug,date,link,_embedded,_links');
+
+        let categoryDetails = null;
+        let authorDetails   = null;
+
+        if (filter.categorySlug) {
+            const cat = await resolveCategoryBySlug(filter.categorySlug);
+            if (cat) {
+                params.set('categories', String(cat.id));
+                categoryDetails = cat;
+            }
+        }
+
+        if (filter.tag) {
+            // Tags: resolve slug → id
+            try {
+                const tagSlug = slugify(filter.tag);
+                const res  = await fetch(`${restBase}/wp/v2/tags?slug=${encodeURIComponent(tagSlug)}&_fields=id,name`, { headers: restHeaders });
+                const data = await res.json();
+                if (Array.isArray(data) && data.length) {
+                    params.set('tags', String(data[0].id));
+                }
+            } catch(e) { /* ignore */ }
+        }
+
+        if (filter.authorSlug) {
+            const author = await resolveAuthorBySlug(filter.authorSlug);
+            if (author) {
+                params.set('author', String(author.id));
+                authorDetails = author;
+            }
+        }
+
+        // WP REST for CPTs uses /wp/v2/{post_type} where slug == CPT name
+        const url = `${restBase}/wp/v2/article?${params.toString()}`;
+        const res = await fetch(url, { headers: restHeaders });
+
+        // WP sends total count in headers
+        totalCount = parseInt(res.headers.get('X-WP-Total') || '0', 10);
+
+        const data = await res.json();
+        if (!Array.isArray(data)) {
+            return { articles: [], categoryDetails, authorDetails };
+        }
+
+        const placeholder = 'https://storage.googleapis.com/msgsndr/9Iv8kFcMiUgScXzMPv23/media/697bd8644d56831c95c3248d.svg';
+
+        const articles = data.map(post => {
+            // Featured image from _embedded
+            const mediaArr = post._embedded?.['wp:featuredmedia'] || [];
+            const image    = mediaArr[0]?.source_url || placeholder;
+
+            // Author from _embedded
+            const authorArr = post._embedded?.author || [];
+            const author    = authorArr[0]?.name || 'Carolina Panorama';
+
+            // Categories from _embedded
+            const termsArr  = post._embedded?.['wp:term'] || [];
+            const cats      = (termsArr[0] || []).map(t => t.name);
+
+            return {
+                url:         post.link,
+                title:       post.title?.rendered || '',
+                description: (post.excerpt?.rendered || '').replace(/<[^>]*>/g, ''),
+                image,
+                author,
+                date:        post.date,
+                categories:  cats.length ? cats : ['News'],
+            };
+        });
+
+        return { articles, categoryDetails, authorDetails };
+    }
+
+    // ── Rendering ───────────────────────────────────────────────────────────
+
     async function renderArticles(articles) {
-        if (!articles || articles.length === 0) {
-            container.innerHTML = '<p style="text-align: center; color: #666;">No articles found.</p>';
+        if (!articles || !articles.length) {
+            container.innerHTML = '<p style="text-align:center;color:#666;">No articles found.</p>';
             return;
         }
         const cardsHTML = await Promise.all(articles.map((data, index) => createArticleCard(data, index)));
         container.innerHTML = cardsHTML.join('');
     }
 
-    // Render pagination
     function renderPagination(page, total) {
-        const prevDisabled = page === 1;
-        const nextDisabled = total <= page * ARTICLES_PER_PAGE;
-        const totalPages = Math.max(1, Math.ceil(total / ARTICLES_PER_PAGE));
+        const prevDisabled  = page === 1;
+        const nextDisabled  = total <= page * ARTICLES_PER_PAGE;
+        const totalPages    = Math.max(1, Math.ceil(total / ARTICLES_PER_PAGE));
         pagination.innerHTML = `
             <button id="feed-prev" ${prevDisabled ? 'disabled' : ''} aria-label="Previous Page">&laquo;</button>
             <span class="page-count">${page} / ${totalPages}</span>
             <button id="feed-next" ${nextDisabled ? 'disabled' : ''} aria-label="Next Page">&raquo;</button>
         `;
-        
-        // Debounce pagination clicks to prevent double-clicks
         const debouncedChangePage = window.CarolinaPanorama.debounce(changePage, 300);
-        
-        document.getElementById('feed-prev').onclick = function() {
-            if (!prevDisabled) debouncedChangePage(page - 1);
-        };
-        document.getElementById('feed-next').onclick = function() {
-            if (!nextDisabled) debouncedChangePage(page + 1);
-        };
+        document.getElementById('feed-prev').onclick = () => { if (!prevDisabled) debouncedChangePage(page - 1); };
+        document.getElementById('feed-next').onclick = () => { if (!nextDisabled) debouncedChangePage(page + 1); };
     }
 
-    // Create article card HTML
     async function createArticleCard(data, index) {
-        // Get category styles dynamically
         const categoryTagsHTML = await Promise.all(
             data.categories.slice(0, 2).map(async cat => {
-                const categoryClass = cat.toLowerCase().replace(/\s+/g, '-');
+                const cls   = cat.toLowerCase().replace(/\s+/g, '-');
                 const style = await window.CarolinaPanorama.getCategoryStyle(cat);
-                return `<span class="cp-article-tag ${categoryClass}" style="${style}">${cat}</span>`;
+                return `<span class="cp-article-tag ${cls}" style="${style}">${cat}</span>`;
             })
         );
-        
-        const imageUrl = data.image || 'https://storage.googleapis.com/msgsndr/9Iv8kFcMiUgScXzMPv23/media/697bd8644d56831c95c3248d.svg';
-        // Lazy load images after the first 3 articles
+        const imageUrl   = data.image || 'https://storage.googleapis.com/msgsndr/9Iv8kFcMiUgScXzMPv23/media/697bd8644d56831c95c3248d.svg';
         const loadingAttr = index >= 3 ? 'loading="lazy"' : 'loading="eager"';
-        
         return `
             <div class="article-list-item">
                 <article class="cp-article-card">
@@ -456,9 +455,7 @@ waitForCarolinaPanorama(function() {
                                 <span class="cp-article-date">${formatDate(data.date)}</span>
                             </div>
                             <p class="cp-article-description">${data.description}</p>
-                            <div class="cp-article-tags">
-                                ${categoryTagsHTML.join('')}
-                            </div>
+                            <div class="cp-article-tags">${categoryTagsHTML.join('')}</div>
                             <span class="cp-article-read-more">Read More</span>
                         </div>
                     </a>
@@ -472,124 +469,74 @@ waitForCarolinaPanorama(function() {
         return 'Published on: ' + new Date(date).toLocaleDateString('en-US', options);
     }
 
-    // Change page
+    // ── Page change & header ────────────────────────────────────────────────
+
     async function changePage(page) {
         currentPage = page;
         const { articles, categoryDetails, authorDetails } = await fetchArticles(page);
         await renderArticles(articles);
         renderPagination(page, totalCount);
-        
-        // Update header with stylized states
+
         const headerContainer = document.getElementById('category-header-container');
-        const headerTitle = document.getElementById('category-title');
-        const filter = getFilterFromUrl();
-        
-        // Reset classes and inline styles
+        const headerTitle     = document.getElementById('category-title');
+        const filter          = getFilterFromUrl();
+
         headerContainer.className = '';
         headerContainer.removeAttribute('style');
-        
-        // SEO Meta injection based on page type
-        if (categoryDetails && categoryDetails.label) {
-            // Category state - use API color_code for background
-            const categoryClass = categoryDetails.label.toLowerCase().replace(/\s+/g, '-');
-            headerContainer.className = 'cp-article-tag ' + categoryClass;
-            
-            // Apply API color_code as inline style for header background
-            const categoryStyle = await window.CarolinaPanorama.getCategoryStyle(categoryDetails.label);
-            if (categoryStyle) {
-                headerContainer.setAttribute('style', categoryStyle);
+
+        if (categoryDetails) {
+            const cls = categoryDetails.name.toLowerCase().replace(/\s+/g, '-');
+            headerContainer.className = 'cp-article-tag ' + cls;
+            if (categoryDetails.color_code) {
+                headerContainer.setAttribute('style', `background-color:${categoryDetails.color_code};`);
+            } else {
+                const style = await window.CarolinaPanorama.getCategoryStyle(categoryDetails.name);
+                if (style) headerContainer.setAttribute('style', style);
             }
-            
-            headerTitle.innerHTML = `<span class="header-title">${categoryDetails.label}</span>`;
-            
-            // Set SEO meta for category pages with description and extracted keywords
-            const categoryName = categoryDetails.label;
-            const description = categoryDetails.description || `Browse the latest ${categoryName} articles from Carolina Panorama`;
-            
-            // Build contextual keywords
-            const baseKeywords = [categoryName];
-            
-            // Add Black-focused variations for relevant categories
-            const blackFocusedCategories = ['Business', 'Finance', 'Politics', 'Health', 'Education', 'Culture', 'Community'];
-            if (blackFocusedCategories.includes(categoryName)) {
-                baseKeywords.push(`Black ${categoryName}`);
-                baseKeywords.push(`African American ${categoryName}`);
-            }
-            
-            // Add geographic variations
-            const geoVariations = ['South Carolina', 'Columbia', 'Orangeburg', 'Lexington'];
-            geoVariations.forEach(location => {
-                baseKeywords.push(`${location} ${categoryName}`);
-            });
-            
-            // Extract keywords from description if available
-            if (categoryDetails.description && window.CarolinaPanorama.extractKeywords) {
-                const extractedKeywords = window.CarolinaPanorama.extractKeywords(categoryDetails.description, 3);
-                if (extractedKeywords) {
-                    baseKeywords.push(extractedKeywords);
-                }
-            }
-            
-            // Add standard context
-            baseKeywords.push('Carolina Panorama', 'news', 'articles');
-            
-            const keywords = baseKeywords.join(', ');
-            
+            headerTitle.innerHTML = `<span class="header-title">${categoryDetails.name}</span>`;
+
+            const desc     = categoryDetails.description || `Browse the latest ${categoryDetails.name} articles from Carolina Panorama`;
+            const keywords = [categoryDetails.name, 'Carolina Panorama', 'news', 'articles'].join(', ');
             window.CarolinaPanorama.setPageMeta({
-                title: `${categoryName} Articles | Carolina Panorama`,
-                description: description,
-                keywords: keywords,
-                url: window.location.href,
-                type: 'website'
+                title:       `${categoryDetails.name} Articles | Carolina Panorama`,
+                description: desc,
+                keywords,
+                url:  window.location.href,
+                type: 'website',
             });
         } else if (filter.tag) {
-            // Tag state - Carolina Navy Blue box with label
             headerContainer.className = 'tag-header';
             headerTitle.innerHTML = `<span class="header-label">Tagged Entity</span><span class="header-title">${filter.tag}</span>`;
-            
-            // Set SEO meta for tag pages
             window.CarolinaPanorama.setPageMeta({
-                title: `Articles tagged: ${filter.tag} | Carolina Panorama`,
+                title:       `Articles tagged: ${filter.tag} | Carolina Panorama`,
                 description: `Explore articles about ${filter.tag} from Carolina Panorama`,
-                keywords: `${filter.tag}, Carolina Panorama, tags, topics`,
-                url: window.location.href,
-                type: 'website'
+                keywords:    `${filter.tag}, Carolina Panorama, tags, topics`,
+                url:  window.location.href,
+                type: 'website',
             });
-        } else if (filter.author) {
-            // Author state - Carolina Navy Blue box with label
-            let authorName = 'Unknown Author';
-            let authorBio = '';
-            if (authorDetails && authorDetails.name) {
-                authorName = authorDetails.name;
-                authorBio = authorDetails.bio || '';
-            }
+        } else if (filter.authorSlug) {
+            const authorName = authorDetails ? authorDetails.name : filter.authorSlug;
+            const authorBio  = authorDetails ? authorDetails.bio  : '';
             headerContainer.className = 'author-header';
             headerTitle.innerHTML = `<span class="header-label">Written by:</span><span class="header-title">${authorName}</span>`;
-            
-            // Set SEO meta for author pages
             window.CarolinaPanorama.setPageMeta({
-                title: `Articles by ${authorName} | Carolina Panorama`,
+                title:       `Articles by ${authorName} | Carolina Panorama`,
                 description: authorBio || `Read articles written by ${authorName} at Carolina Panorama`,
-                keywords: `${authorName}, author, Carolina Panorama, articles`,
-                url: window.location.href,
-                type: 'profile'
+                keywords:    `${authorName}, author, Carolina Panorama, articles`,
+                url:  window.location.href,
+                type: 'profile',
             });
         } else {
-            // Latest Articles - keep original style
             headerContainer.className = 'latest-header';
             headerTitle.textContent = 'Latest Articles';
-            
-            // Set SEO meta for homepage/latest
             window.CarolinaPanorama.setPageMeta({
-                title: 'Latest Articles | Carolina Panorama',
+                title:       'Latest Articles | Carolina Panorama',
                 description: 'Browse the latest news and articles from Carolina Panorama',
-                keywords: 'Carolina Panorama, latest news, articles, updates',
-                url: window.location.href,
-                type: 'website'
+                keywords:    'Carolina Panorama, latest news, articles, updates',
+                url:  window.location.href,
+                type: 'website',
             });
         }
-        
-        headerContainer.style.display = '';
     }
 
     // Initial load

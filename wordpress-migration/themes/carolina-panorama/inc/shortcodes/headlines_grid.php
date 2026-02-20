@@ -2,18 +2,95 @@
 /**
  * Shortcode: cp_headlines_grid
  * Widget: Headlines Grid
+ *
+ * Renders the top 5 articles from the native 'article' CPT — no external
+ * API calls.  PHP queries WP, outputs fully-rendered HTML; the inline JS
+ * that used to fetch from the CMS has been removed.
  */
 
+function cp_headlines_grid_get_articles( int $count = 5 ): array {
+    // ── 1. Editor-curated headlines (checked in the article sidebar) ──────────
+    $headline_query = new WP_Query( [
+        'post_type'      => 'article',
+        'post_status'    => 'publish',
+        'posts_per_page' => $count,
+        'orderby'        => 'date',
+        'order'          => 'DESC',
+        'no_found_rows'  => true,
+        'meta_query'     => [ [
+            'key'   => '_is_headline',
+            'value' => '1',
+        ] ],
+    ] );
+    $posts = $headline_query->posts;
+
+    // ── 2. Backfill with most-recent articles if fewer than $count are marked ─
+    if ( count( $posts ) < $count ) {
+        $existing_ids = array_map( fn( $p ) => $p->ID, $posts );
+        $backfill = new WP_Query( [
+            'post_type'      => 'article',
+            'post_status'    => 'publish',
+            'posts_per_page' => $count - count( $posts ),
+            'orderby'        => 'date',
+            'order'          => 'DESC',
+            'no_found_rows'  => true,
+            'post__not_in'   => $existing_ids ?: [ 0 ],
+        ] );
+        $posts = array_merge( $posts, $backfill->posts );
+    }
+
+    // ── 3. Map WP_Post objects to display arrays ───────────────────────────────
+    $articles = [];
+    foreach ( $posts as $post ) {
+        $image      = cp_article_thumbnail_fallback_url( $post->ID );
+        $image_alt  = cp_article_thumbnail_fallback_alt( $post->ID );
+        $categories = get_the_terms( $post->ID, 'category' ) ?: [];
+        $author_id  = $post->post_author;
+
+        $cats = [];
+        foreach ( $categories as $cat ) {
+            $color  = get_term_meta( $cat->term_id, '_color_code', true ) ?: '#3b82f6';
+            $cats[] = [ 'name' => $cat->name, 'color' => $color, 'slug' => $cat->slug ];
+        }
+
+        $articles[] = [
+            'title'      => get_the_title( $post ),
+            'url'        => get_permalink( $post ),
+            'excerpt'    => get_the_excerpt( $post ),
+            'image'      => $image ?: 'https://storage.googleapis.com/msgsndr/9Iv8kFcMiUgScXzMPv23/media/697bd8644d56831c95c3248d.svg',
+            'image_alt'  => $image_alt ?: get_the_title( $post ),
+            'author'     => get_the_author_meta( 'display_name', $author_id ) ?: 'Carolina Panorama',
+            'date'       => get_the_date( 'M j, Y', $post ),
+            'categories' => $cats,
+            'is_headline'=> (bool) get_post_meta( $post->ID, '_is_headline', true ),
+        ];
+    }
+    return $articles;
+}
+
 function cp_shortcode_headlines_grid( $atts = [], $content = null, $tag = '' ) {
-    // Enqueue dependencies
-    wp_enqueue_script( 'cp-global-js' );
     wp_enqueue_style( 'cp-article-card-styles' );
 
+    $articles = headlines_grid_get_articles( 5 );
+    // Helper closure for rendering one category tag badge
+    $cat_badge = function( array $cat ): string {
+        $cls   = 'cp-article-tag ' . sanitize_html_class( $cat['slug'] );
+        $style = 'background-color:' . esc_attr( $cat['color'] ) . ' !important;';
+        return '<span class="' . esc_attr( $cls ) . '" style="' . $style . '">'
+             . esc_html( $cat['name'] ) . '</span>';
+    };
+
     ob_start();
+
+    // Bail gracefully if there are no articles yet
+    if ( empty( $articles ) ) {
+        return '<p style="text-align:center;color:#666;">No articles found.</p>';
+    }
+
+    // Slot names in grid order: [0]=center(featured), [1]=left-top, [2]=left-bottom, [3]=right-top, [4]=right-bottom
+    $slots = [ 'headlines-center', 'headlines-left-top', 'headlines-left-bottom', 'headlines-right-top', 'headlines-right-bottom' ];
     ?>
 <!-- Headlines Grid Widget - Displays 5 articles with featured layout -->
-<!-- Include shared-article-card-styles.css in your page -->
-
 <style>
     .headlines-section-wrapper {
         width: 100%;
@@ -70,25 +147,10 @@ function cp_shortcode_headlines_grid( $atts = [], $content = null, $tag = '' ) {
         position: relative;
     }
 
-    .headlines-left-top {
-        grid-column: 1;
-        grid-row: 1;
-    }
-
-    .headlines-left-bottom {
-        grid-column: 1;
-        grid-row: 2;
-    }
-
-    .headlines-right-top {
-        grid-column: 3;
-        grid-row: 1;
-    }
-
-    .headlines-right-bottom {
-        grid-column: 3;
-        grid-row: 2;
-    }
+    .headlines-left-top    { grid-column: 1; grid-row: 1; }
+    .headlines-left-bottom { grid-column: 1; grid-row: 2; }
+    .headlines-right-top   { grid-column: 3; grid-row: 1; }
+    .headlines-right-bottom{ grid-column: 3; grid-row: 2; }
 
     /* Responsive design */
     @media (max-width: 1024px) {
@@ -96,47 +158,20 @@ function cp_shortcode_headlines_grid( $atts = [], $content = null, $tag = '' ) {
             grid-template-columns: 1fr 1fr;
             grid-template-rows: auto;
         }
-
-        .headlines-center {
-            grid-column: 1 / 3;
-            grid-row: 1;
-        }
-
-        .headlines-left-top {
-            grid-column: 1;
-            grid-row: 2;
-        }
-
-        .headlines-left-bottom {
-            grid-column: 2;
-            grid-row: 2;
-        }
-
-        .headlines-right-top {
-            grid-column: 1;
-            grid-row: 3;
-        }
-
-        .headlines-right-bottom {
-            grid-column: 2;
-            grid-row: 3;
-        }
+        .headlines-center      { grid-column: 1 / 3; grid-row: 1; }
+        .headlines-left-top    { grid-column: 1;     grid-row: 2; }
+        .headlines-left-bottom { grid-column: 2;     grid-row: 2; }
+        .headlines-right-top   { grid-column: 1;     grid-row: 3; }
+        .headlines-right-bottom{ grid-column: 2;     grid-row: 3; }
     }
 
     @media (max-width: 640px) {
-        .headlines-section-header {
-            margin-bottom: 16px;
-        }
-
-        .headlines-section-title {
-            font-size: 1.5rem;
-        }
-
+        .headlines-section-header { margin-bottom: 16px; }
+        .headlines-section-title  { font-size: 1.5rem; }
         .headlines-grid {
             grid-template-columns: 1fr;
             gap: 16px;
         }
-
         .headlines-center,
         .headlines-left-top,
         .headlines-left-bottom,
@@ -152,231 +187,54 @@ function cp_shortcode_headlines_grid( $atts = [], $content = null, $tag = '' ) {
     <div class="headlines-section-header">
         <h2 class="headlines-section-title">Top Headlines</h2>
     </div>
-
     <div class="headlines-grid">
-        <!-- Featured article (center) - index 0 -->
-        <div class="headlines-center">
-            <span class="featured-badge">Featured</span>
-            <article class="cp-article-card cp-article-card-featured">
-                <a href="#" class="cp-article-card-link" data-article-index="0">
-                    <img src="https://storage.googleapis.com/msgsndr/9Iv8kFcMiUgScXzMPv23/media/697bd8644d56831c95c3248d.svg" alt="Article" class="cp-article-image" fetchpriority="high" loading="eager">
+    <?php foreach ( $slots as $i => $slot ) :
+        if ( ! isset( $articles[ $i ] ) ) continue;
+        $a         = $articles[ $i ];
+        $is_center = ( $i === 0 );
+        $card_cls  = $is_center ? 'cp-article-card cp-article-card-featured' : 'cp-article-card cp-article-card-small';
+        $title_tag = $is_center ? 'h2' : 'h3';
+        $loading   = $is_center ? 'eager' : 'lazy';
+        $priority  = $is_center ? ' fetchpriority="high"' : '';
+        $cats_html = '';
+        foreach ( array_slice( $a['categories'], 0, 2 ) as $cat ) {
+            $cls        = 'cp-article-tag ' . sanitize_html_class( $cat['slug'] );
+            $cat_style  = 'background-color:' . esc_attr( $cat['color'] ) . ' !important;';
+            $cats_html .= '<span class="' . esc_attr( $cls ) . '" style="' . $cat_style . '">' . esc_html( $cat['name'] ) . '</span>';
+        }
+    ?>
+        <div class="<?php echo esc_attr( $slot ); ?>">
+            <?php if ( $is_center ) : ?><span class="featured-badge">Featured</span><?php endif; ?>
+            <article class="<?php echo esc_attr( $card_cls ); ?>">
+                <a href="<?php echo esc_url( $a['url'] ); ?>" class="cp-article-card-link">
+                    <img src="<?php echo esc_url( $a['image'] ); ?>"
+                         alt="<?php echo esc_attr( $a['image_alt'] ); ?>"
+                         class="cp-article-image"
+                         loading="<?php echo $loading; ?>"<?php echo $priority; ?>>
                     <div class="cp-article-content">
-                        <div class="cp-article-tags">
-                            <span class="cp-article-tag">Loading</span>
-                        </div>
-                        <h2 class="cp-article-title">Loading article...</h2>
+                        <div class="cp-article-tags"><?php echo $cats_html; ?></div>
+                        <<?php echo $title_tag; ?> class="cp-article-title"><?php echo esc_html( $a['title'] ); ?></<?php echo $title_tag; ?>>
                         <div class="cp-article-meta">
-                            <span class="cp-article-author">Carolina Panorama</span>
-                            <span class="cp-article-date">Today</span>
+                            <span class="cp-article-author"><?php echo esc_html( $a['author'] ); ?></span>
+                            <span class="cp-article-date"><?php echo esc_html( $a['date'] ); ?></span>
                         </div>
-                        <p class="cp-article-description">Please wait while we load the content...</p>
+                        <?php if ( $is_center && $a['excerpt'] ) : ?>
+                        <p class="cp-article-description"><?php echo esc_html( $a['excerpt'] ); ?></p>
+                        <?php endif; ?>
                     </div>
                 </a>
             </article>
         </div>
-
-        <!-- Side articles - indices 1-4 -->
-        <div class="headlines-left-top">
-            <article class="cp-article-card cp-article-card-small">
-                <a href="#" class="cp-article-card-link" data-article-index="1">
-                    <img src="https://storage.googleapis.com/msgsndr/9Iv8kFcMiUgScXzMPv23/media/697bd8644d56831c95c3248d.svg" alt="Article" class="cp-article-image" fetchpriority="high" loading="eager">
-                    <div class="cp-article-content">
-                        <div class="cp-article-tags">
-                            <span class="cp-article-tag">Loading</span>
-                        </div>
-                        <h3 class="cp-article-title">Loading...</h3>
-                        <div class="cp-article-meta">
-                            <span class="cp-article-author">Carolina Panorama</span>
-                            <span class="cp-article-date">Today</span>
-                        </div>
-                    </div>
-                </a>
-            </article>
-        </div>
-
-        <div class="headlines-left-bottom">
-            <article class="cp-article-card cp-article-card-small">
-                <a href="#" class="cp-article-card-link" data-article-index="2">
-                    <img src="https://storage.googleapis.com/msgsndr/9Iv8kFcMiUgScXzMPv23/media/697bd8644d56831c95c3248d.svg" alt="Article" class="cp-article-image" fetchpriority="high" loading="eager">
-                    <div class="cp-article-content">
-                        <div class="cp-article-tags">
-                            <span class="cp-article-tag">Loading</span>
-                        </div>
-                        <h3 class="cp-article-title">Loading...</h3>
-                        <div class="cp-article-meta">
-                            <span class="cp-article-author">Carolina Panorama</span>
-                            <span class="cp-article-date">Today</span>
-                        </div>
-                    </div>
-                </a>
-            </article>
-        </div>
-
-        <div class="headlines-right-top">
-            <article class="cp-article-card cp-article-card-small">
-                <a href="#" class="cp-article-card-link" data-article-index="3">
-                    <img src="https://storage.googleapis.com/msgsndr/9Iv8kFcMiUgScXzMPv23/media/697bd8644d56831c95c3248d.svg" alt="Article" class="cp-article-image" fetchpriority="high" loading="eager">
-                    <div class="cp-article-content">
-                        <div class="cp-article-tags">
-                            <span class="cp-article-tag">Loading</span>
-                        </div>
-                        <h3 class="cp-article-title">Loading...</h3>
-                        <div class="cp-article-meta">
-                            <span class="cp-article-author">Carolina Panorama</span>
-                            <span class="cp-article-date">Today</span>
-                        </div>
-                    </div>
-                </a>
-            </article>
-        </div>
-
-        <div class="headlines-right-bottom">
-            <article class="cp-article-card cp-article-card-small">
-                <a href="#" class="cp-article-card-link" data-article-index="4">
-                    <img src="https://storage.googleapis.com/msgsndr/9Iv8kFcMiUgScXzMPv23/media/697bd8644d56831c95c3248d.svg" alt="Article" class="cp-article-image" fetchpriority="high" loading="eager">
-                    <div class="cp-article-content">
-                        <div class="cp-article-tags">
-                            <span class="cp-article-tag">Loading</span>
-                        </div>
-                        <h3 class="cp-article-title">Loading...</h3>
-                        <div class="cp-article-meta">
-                            <span class="cp-article-author">Carolina Panorama</span>
-                            <span class="cp-article-date">Today</span>
-                        </div>
-                    </div>
-                </a>
-            </article>
-        </div>
+    <?php endforeach; ?>
     </div>
 </div>
-
-    <script>
-    // Wait for CarolinaPanorama global before running widget logic
-    function waitForCarolinaPanorama(callback, timeout = 5000) {
-        const start = Date.now();
-        (function check() {
-            if (window.CarolinaPanorama) {
-                callback();
-            } else if (Date.now() - start < timeout) {
-                setTimeout(check, 30);
-            } else {
-                console.error('CarolinaPanorama global not found.');
-            }
-        })();
-    }
-
-    waitForCarolinaPanorama(function() {
-        const apiBase = window.CarolinaPanorama.API_BASE_URL || 'https://cms.carolinapanorama.org';
-        
-        function formatDate(dateStr) {
-            if (!dateStr) return '';
-            try {
-                const options = { month: 'short', day: 'numeric', year: 'numeric' };
-                return new Date(dateStr).toLocaleDateString('en-US', options);
-            } catch (e) {
-                return dateStr;
-            }
-        }
-
-        function slugify(str) {
-            return String(str || '')
-                .toLowerCase()
-                .trim()
-                .replace(/[^a-z0-9\s-]/g, '')
-                .replace(/\s+/g, '-');
-        }
-
-        // Update a single article card
-        async function updateArticleCard(linkElement, article) {
-            linkElement.href = article.url;
-
-            const image = linkElement.querySelector('.cp-article-image');
-            image.classList.add('is-loading');
-            
-            // Use image URL directly (Cloudflare handles optimization)
-            const placeholderUrl = 'https://storage.googleapis.com/msgsndr/9Iv8kFcMiUgScXzMPv23/media/697bd8644d56831c95c3248d.svg';
-            const imageUrl = article.featured_image || placeholderUrl;
-
-            image.addEventListener('load', () => {
-                image.classList.remove('is-loading');
-            }, { once: true });
-            image.src = imageUrl;
-            image.alt = article.featured_image_alt || article.title;
-            
-            const tagsContainer = linkElement.querySelector('.cp-article-tags');
-            if (article.categories && article.categories.length) {
-                const categoryTags = await Promise.all(
-                    article.categories.slice(0, 2).map(async cat => {
-                        const catName = cat.name || cat;
-                        const catClass = slugify(catName);
-                        const style = await window.CarolinaPanorama.getCategoryStyle(catName);
-                        return `<span class="cp-article-tag ${catClass}" style="${style}">${catName}</span>`;
-                    })
-                );
-                tagsContainer.innerHTML = categoryTags.join('');
-            }
-            
-            const title = linkElement.querySelector('.cp-article-title');
-            title.textContent = article.title;
-            
-            const meta = linkElement.querySelector('.cp-article-meta');
-            let authorSpan = meta.querySelector('.cp-article-author');
-            const dateSpan = meta.querySelector('.cp-article-date');
-            
-            if (!authorSpan && dateSpan) {
-                authorSpan = document.createElement('span');
-                authorSpan.className = 'cp-article-author';
-                meta.insertBefore(authorSpan, dateSpan);
-            }
-            if (authorSpan) {
-                const authorName = article.author?.name || 'Carolina Panorama';
-                authorSpan.textContent = authorName;
-            }
-            if (dateSpan) {
-                dateSpan.textContent = formatDate(article.publish_date);
-            }
-            
-            const description = linkElement.querySelector('.cp-article-description');
-            if (description && article.excerpt) {
-                description.textContent = article.excerpt;
-            }
-        }
-
-        // Fetch and initialize all articles from new headlines API
-        async function initializeGrid() {
-            try {
-                const url = `${apiBase}/api/public/headlines`;
-                console.log('[Headlines Grid] Fetching from:', url);
-                
-                const res = await fetch(url);
-                const json = await res.json();
-                
-                if (!json.success || !json.data || json.data.length === 0) {
-                    console.error('[Headlines Grid] No articles returned from API');
-                    return;
-                }
-                
-                const articles = json.data;
-                const edition = json.edition;
-                console.log(`[Headlines Grid] Loaded ${articles.length} articles from edition: ${edition || 'N/A'}`);
-                
-                const articleLinks = document.querySelectorAll('.cp-article-card-link');
-                for (let index = 0; index < articleLinks.length; index++) {
-                    if (articles[index]) {
-                        await updateArticleCard(articleLinks[index], articles[index]);
-                    }
-                }
-            } catch (e) {
-                console.error('[Headlines Grid] Failed to load articles:', e);
-            }
-        }
-
-        initializeGrid();
-    });
-</script>
     <?php
     return ob_get_clean();
 }
+
+// Internal helper used only by this shortcode (avoids collision with any global)
+function headlines_grid_get_articles( int $count ): array {
+    return cp_headlines_grid_get_articles( $count );
 
 // Register shortcode
 add_shortcode( 'cp_headlines_grid', 'cp_shortcode_headlines_grid' );

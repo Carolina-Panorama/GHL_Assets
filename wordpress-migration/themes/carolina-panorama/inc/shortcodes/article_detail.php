@@ -483,15 +483,23 @@ function cp_shortcode_article_detail( $atts = [], $content = null, $tag = '' ) {
     }
 
     function getSlugFromPath() {
-      // Try hash fragment: /article#slug
+      // 1. Path segment: /article/some-slug  ← standard (WP rewrite rule routes here)
+      const pathMatch = window.location.pathname.match(/\/article\/([^\/]+)\/?$/);
+      if (pathMatch) {
+        const slug = decodeURIComponent(pathMatch[1]);
+        console.log('[Article Detail Widget] Extracted slug from path:', slug);
+        return slug;
+      }
+
+      // 2. Hash fragment: /article#slug  ← legacy (old GHL / pre-WP links)
       const hash = window.location.hash;
       if (hash && hash.length > 1) {
         const slug = decodeURIComponent(hash.substring(1));
         console.log('[Article Detail Widget] Extracted slug from hash:', slug);
         return slug;
       }
-      
-      // Check for query parameter: /article?q=slug (fallback)
+
+      // 3. Query parameter: /article?q=slug  ← fallback
       const urlParams = new URLSearchParams(window.location.search);
       const querySlug = urlParams.get('q');
       if (querySlug) {
@@ -499,8 +507,8 @@ function cp_shortcode_article_detail( $atts = [], $content = null, $tag = '' ) {
         console.log('[Article Detail Widget] Extracted slug from query parameter:', querySlug);
         return slug;
       }
-      
-      console.warn('[Article Detail Widget] Could not extract slug. Expected: /article#slug or /article?q=slug');
+
+      console.warn('[Article Detail Widget] Could not extract slug. Expected: /article/slug, /article#slug, or /article?q=slug');
       return null;
     }
 
@@ -522,7 +530,7 @@ function cp_shortcode_article_detail( $atts = [], $content = null, $tag = '' ) {
       const catLinks = categories.map(cat => {
         const name = cat.name || '';
         const slug = slugify(name);
-        const href = `/article-feed/category/${encodeURIComponent(slug)}`;
+        const href = `/articles/category/${encodeURIComponent(slug)}`;
         return `<a href="${href}">${name}</a>`;
       });
       return catLinks.join(' | ');
@@ -558,7 +566,7 @@ function cp_shortcode_article_detail( $atts = [], $content = null, $tag = '' ) {
         .map(tag => {
           const name = tag.name || '';
           const slug = slugify(name);
-          const href = `/article-feed/tag/${encodeURIComponent(slug)}`;
+          const href = `/articles/tag/${encodeURIComponent(slug)}`;
           return `<a class="article-tag-pill" href="${href}">${name}</a>`;
         })
         .join('');
@@ -589,7 +597,7 @@ function cp_shortcode_article_detail( $atts = [], $content = null, $tag = '' ) {
 
       const name = author.name || 'Carolina Panorama';
       const slug = slugify(name);
-      const href = `/article-feed/author/${encodeURIComponent(slug)}`;
+      const href = `/articles/author/${encodeURIComponent(slug)}`;
 
       authorNameEl.innerHTML = `<a href="${href}">${name}</a>`;
       authorBioEl.textContent = author.bio || '';

@@ -18,6 +18,17 @@ function cp_shortcode_article_feed( $atts = [], $content = null, $tag = '' ) {
         'page' => 1,
     ];
     $atts = shortcode_atts( $defaults, $atts, 'cp_article_feed' );
+    
+    // Check for query parameters from redirects (category, tag, author)
+    if ( empty( $atts['category'] ) && ! empty( $_GET['category'] ) ) {
+        $atts['category'] = sanitize_text_field( $_GET['category'] );
+    }
+    if ( empty( $atts['category'] ) && ! empty( $_GET['tag'] ) ) {
+        $atts['category'] = sanitize_text_field( $_GET['tag'] );
+    }
+    if ( empty( $atts['category'] ) && ! empty( $_GET['author'] ) ) {
+        $atts['category'] = sanitize_text_field( $_GET['author'] );
+    }
 
     // Pass attributes to JavaScript via data attributes
     $data_attrs = '';

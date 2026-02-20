@@ -10,9 +10,16 @@
     // Utility: Format date for display
     window.CarolinaPanorama = window.CarolinaPanorama || {};
 
-    // Base URL for Carolina Panorama CMS public API
-    // Can be overridden by setting window.CarolinaPanorama.API_BASE_URL before this script runs
+    // Base URL for Carolina Panorama CMS public API (legacy – kept for article_detail fallback)
     window.CarolinaPanorama.API_BASE_URL = window.CarolinaPanorama.API_BASE_URL || 'https://cms.carolinapanorama.org';
+
+    // WP REST API base (set by PHP via CarolinaPanoramaConfig.restUrl)
+    window.CarolinaPanorama.WP_REST_URL = (window.CarolinaPanoramaConfig && window.CarolinaPanoramaConfig.restUrl)
+        ? window.CarolinaPanoramaConfig.restUrl.replace(/\/+$/, '')
+        : '/wp-json';
+    window.CarolinaPanorama.WP_NONCE = (window.CarolinaPanoramaConfig && window.CarolinaPanoramaConfig.restNonce)
+        ? window.CarolinaPanoramaConfig.restNonce
+        : '';
     
     window.CarolinaPanorama.formatDate = function(dateString) {
         if (!dateString) return '';
@@ -73,22 +80,31 @@
     const CACHE_KEY = 'cp_categories_cache';
     const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
-    // Fetch and cache categories from CMS with localStorage persistence
+    // Fetch and cache categories — uses PHP-injected window.cpCategories as
+    // the primary source (zero network round-trip), then falls back to the
+    // WP REST API, and finally to localStorage for offline resilience.
     window.CarolinaPanorama.fetchCategories = async function(forceRefresh = false) {
-        // Check memory cache first
+        // ── 1. PHP-injected data (fastest – no fetch needed) ─────────────────
+        if (!forceRefresh && window.cpCategories && window.cpCategories.length) {
+            if (!categoriesCache) {
+                categoriesCache = window.cpCategories;
+                console.log('[CarolinaPanorama] Using', categoriesCache.length, 'PHP-injected categories');
+            }
+            return categoriesCache;
+        }
+
+        // ── 2. Memory cache ──────────────────────────────────────────────────
         if (categoriesCache && !forceRefresh) {
             return categoriesCache;
         }
-        
-        // Check localStorage cache
+
+        // ── 3. localStorage cache ────────────────────────────────────────────
         if (!forceRefresh) {
             try {
                 const cached = localStorage.getItem(CACHE_KEY);
                 if (cached) {
                     const { data, timestamp } = JSON.parse(cached);
-                    const age = Date.now() - timestamp;
-                    
-                    if (age < CACHE_DURATION) {
+                    if (Date.now() - timestamp < CACHE_DURATION) {
                         categoriesCache = data;
                         console.log('[CarolinaPanorama] Loaded', data.length, 'categories from localStorage cache');
                         return categoriesCache;
@@ -100,22 +116,33 @@
                 console.warn('[CarolinaPanorama] Failed to read localStorage cache:', e);
             }
         }
-        
-        // If already fetching, return the existing promise
+
+        // ── 4. WP REST API (fallback fetch) ──────────────────────────────────
         if (categoriesFetchPromise) {
             return categoriesFetchPromise;
         }
-        
+
         categoriesFetchPromise = (async () => {
             try {
-                const apiBase = window.CarolinaPanorama.API_BASE_URL || 'https://cms.carolinapanorama.org';
-                const response = await fetch(`${apiBase}/api/public/categories`);
+                const restBase = window.CarolinaPanorama.WP_REST_URL;
+                // Request up to 100 categories; include _color_code meta
+                const url = `${restBase}/wp/v2/categories?per_page=100&_fields=id,name,slug,meta,link`;
+                const headers = {};
+                if (window.CarolinaPanorama.WP_NONCE) {
+                    headers['X-WP-Nonce'] = window.CarolinaPanorama.WP_NONCE;
+                }
+                const response = await fetch(url, { headers });
                 const data = await response.json();
-                
-                if (data.success && data.data) {
-                    categoriesCache = data.data;
-                    
-                    // Store in localStorage
+
+                if (Array.isArray(data)) {
+                    categoriesCache = data.map(cat => ({
+                        id:         cat.id,
+                        name:       cat.name,
+                        slug:       cat.slug,
+                        color_code: (cat.meta && cat.meta._color_code) ? cat.meta._color_code : '#3b82f6',
+                        link:       cat.link || '',
+                    }));
+
                     try {
                         localStorage.setItem(CACHE_KEY, JSON.stringify({
                             data: categoriesCache,
@@ -124,20 +151,20 @@
                     } catch (e) {
                         console.warn('[CarolinaPanorama] Failed to cache in localStorage:', e);
                     }
-                    
-                    console.log('[CarolinaPanorama] Fetched and cached', categoriesCache.length, 'categories');
+
+                    console.log('[CarolinaPanorama] Fetched', categoriesCache.length, 'categories from WP REST API');
                     return categoriesCache;
                 }
-                
+
                 return [];
             } catch (error) {
-                console.error('[CarolinaPanorama] Failed to fetch categories:', error);
+                console.error('[CarolinaPanorama] Failed to fetch categories from WP REST API:', error);
                 return [];
             } finally {
                 categoriesFetchPromise = null;
             }
         })();
-        
+
         return categoriesFetchPromise;
     };
 

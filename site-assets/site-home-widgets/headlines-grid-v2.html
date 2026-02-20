@@ -277,18 +277,31 @@
         async function updateArticleCard(linkElement, article) {
             linkElement.href = article.url;
 
-            const image = linkElement.querySelector('.cp-article-image');
-            image.classList.add('is-loading');
-            
+            // The global error-handler may have replaced <img class="cp-article-image">
+            // with a <div class="img-placeholder"> before this code runs.
+            // Recover by swapping the placeholder back for a fresh <img>.
+            let image = linkElement.querySelector('.cp-article-image');
+            if (!image) {
+                const placeholder = linkElement.querySelector('.img-placeholder');
+                if (placeholder) {
+                    image = document.createElement('img');
+                    image.className = 'cp-article-image';
+                    placeholder.replaceWith(image);
+                }
+            }
+
             // Use image URL directly (Cloudflare handles optimization)
             const placeholderUrl = 'https://storage.googleapis.com/msgsndr/9Iv8kFcMiUgScXzMPv23/media/697bd8644d56831c95c3248d.svg';
             const imageUrl = article.featured_image || placeholderUrl;
 
-            image.addEventListener('load', () => {
-                image.classList.remove('is-loading');
-            }, { once: true });
-            image.src = imageUrl;
-            image.alt = article.featured_image_alt || article.title;
+            if (image) {
+                image.classList.add('is-loading');
+                image.addEventListener('load', () => {
+                    image.classList.remove('is-loading');
+                }, { once: true });
+                image.src = imageUrl;
+                image.alt = article.featured_image_alt || article.title;
+            }
             
             const tagsContainer = linkElement.querySelector('.cp-article-tags');
             if (article.categories && article.categories.length) {

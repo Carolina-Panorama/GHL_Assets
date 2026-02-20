@@ -63,6 +63,7 @@ function cp_shortcode_article_list_feed( $atts = [], $content = null, $tag = '' 
         overflow: hidden;
         background: #f3f4f6;
         border-radius: 8px 0 0 8px;
+        height: 240px;
     }
 
     .featured-image-container img {
@@ -76,7 +77,6 @@ function cp_shortcode_article_list_feed( $atts = [], $content = null, $tag = '' 
         display: flex;
         flex-direction: column;
         justify-content: center;
-        padding: 19px;
         gap: 10px;
     }
 
@@ -218,7 +218,9 @@ function cp_shortcode_article_list_feed( $atts = [], $content = null, $tag = '' 
     }
 
     .article-list-item .cp-article-author::before {
-        content: none;
+        content: "👤";
+        font-size: clamp(0.7rem, 0.85vw, 0.75rem);
+        margin-right: clamp(2px, 0.3vw, 3px);
     }
 
     /* Hide image, description, and read more in condensed view */
@@ -406,7 +408,7 @@ waitForCarolinaPanorama(function() {
             title: article.title,
             description: article.excerpt || '',
             image: article.featured_image,
-            author: article.author && article.author.name ? article.author.name : '',
+            author: article.author && article.author.name ? article.author.name : 'Carolina Panorama',
             date: article.publish_date,
             categories: Array.isArray(article.categories) && article.categories.length > 0
                 ? article.categories.map(cat => cat.name)

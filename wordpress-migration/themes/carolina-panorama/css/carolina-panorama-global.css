@@ -1,5 +1,11 @@
 body {
     touch-action: pan-y;
+    margin: 0;
+    padding: 0;
+}
+
+#page {
+    background: #fff;
 }
 
 /* Allow horizontal scroll for carousel elements */
@@ -223,7 +229,7 @@ h3 {
 
 /* Size Variants */
 .cp-article-card-featured .cp-article-image {
-    height: clamp(200px, 24vw, 240px);
+    height: clamp(400px, 24vw, 240px);
 }
 
 .cp-article-card-featured .cp-article-title {
@@ -235,7 +241,7 @@ h3 {
 }
 
 .cp-article-card-small .cp-article-image {
-    height: clamp(100px, 12vw, 120px);
+    height: clamp(175px, 12vw, 120px);
 }
 
 .cp-article-card-small .cp-article-title {
@@ -296,21 +302,30 @@ h3 {
 
 .site-banner {
     background: linear-gradient(135deg, #00235b 0%, #0c4da0 45%, #1565c0 100%);
-    padding: 28px 24px;
+    padding: 0px;
+    margin: 0px;
+    border-radius: 0px;
+    position: relative;
 }
 
 .site-banner-inner {
     max-width: 1280px;
+    width: 100%;
     margin: 0 auto;
+    justify-content: center;
     display: flex;
     align-items: center;
     gap: 24px;
 }
 
 .site-logo {
+    padding: 0 0 10px 5px;
+    width: 30%;
+    margin: 0;
     display: flex;
     align-items: center;
     flex-shrink: 0;
+	flex: 1 1 auto !important;
 }
 
 .site-logo-img,
@@ -324,12 +339,22 @@ h3 {
 .site-identity {
     display: flex;
     flex-direction: column;
+    justify-content: center;
+	flex: 1 1 auto !important;
+    flex-wrap: nowrap;
+    width: 70%;
+    margin: 0;
     gap: 6px;
 }
 
 .site-title {
     margin: 0;
     padding: 0;
+    width: auto;
+    height: auto;
+    word-break: break-word;
+    position: relative;
+    box-sizing: border-box;
     font-size: clamp(1.9rem, 4vw, 3rem) !important;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     font-weight: 800;
@@ -349,6 +374,9 @@ h3 {
 
 .site-description {
     margin: 0;
+    word-break: break-word;
+    position: relative;
+    box-sizing: border-box;
     font-size: clamp(0.88rem, 1.4vw, 1.05rem);
     color: rgba(255, 255, 255, 0.82);
     font-style: italic;
@@ -364,6 +392,7 @@ h3 {
     top: 0;
     z-index: 1000;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+    margin: 0 10%;
 }
 
 .site-nav-inner {
@@ -546,7 +575,21 @@ h3 {
 @media (max-width: 768px) {
     .site-banner { padding: 18px 16px; }
 
-    .site-banner-inner { gap: 14px; }
+    .site-banner-inner {
+        gap: 14px;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .site-logo {
+        width: auto;
+        justify-content: center;
+    }
+
+    .site-identity {
+        width: 100%;
+        text-align: center;
+    }
 
     .site-logo-img,
     .site-logo .custom-logo { height: 64px; }
@@ -614,6 +657,34 @@ h3 {
     .main-navigation.toggled ul ul li a {
         padding-left: 30px;
     }
+
+    .site-nav-bar { margin: 0; }
+
+    main { margin: 0 4%; }
+}
+
+
+/* ========================================
+   MAIN CONTENT
+   ======================================== */
+
+main {
+    margin: 0 10%;
+    box-sizing: border-box;
+}
+
+/* ---- Nav divider & ad banner (below sticky nav) ---- */
+
+.nav-divider {
+    margin: 0 auto;
+    color: #eee;
+    width: 80%;
+}
+
+.nav-ad-banner {
+    width: 80%;
+    margin: 0 auto;
+    padding: 5px;
 }
 
 
@@ -789,4 +860,5 @@ h3 {
 @media (max-width: 480px) {
     .footer-grid { grid-template-columns: 1fr; }
     .footer-cta { padding: 40px 0 0; }
+    main { margin: 0 2%; }
 }

@@ -30,7 +30,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                         <?php if ( has_custom_logo() ) : ?>
                             <?php the_custom_logo(); ?>
                         <?php else : ?>
-                            <a href="<?php echo esc_url( home_url( '/' ) ); ?>" rel="home">
+                            <a href="<?php echo esc_url( home_url( '/' ) ); ?>" rel="home" style="margin-left: auto;">
                                 <picture>
                                     <source media="(max-width:900px) and (min-width:768px)" srcset="https://images.leadconnectorhq.com/image/f_webp/q_80/r_900/u_https://assets.cdn.filesafe.space/9Iv8kFcMiUgScXzMPv23/media/69728af6310c2d5fb7a20741.png">
                                     <source media="(max-width:768px) and (min-width:640px)"  srcset="https://images.leadconnectorhq.com/image/f_webp/q_80/r_768/u_https://assets.cdn.filesafe.space/9Iv8kFcMiUgScXzMPv23/media/69728af6310c2d5fb7a20741.png">
@@ -47,15 +47,17 @@ if ( ! defined( 'ABSPATH' ) ) {
                     </div><!-- .site-logo -->
 
                     <div class="site-identity">
-                        <p class="site-title">
-                            <a href="<?php echo esc_url( home_url( '/' ) ); ?>" rel="home">
-                                <?php bloginfo( 'name' ); ?>
-                            </a>
-                        </p>
-                        <?php $description = get_bloginfo( 'description', 'display' ); ?>
-                        <?php if ( $description ) : ?>
-                            <p class="site-description"><?php echo esc_html( $description ); ?></p>
-                        <?php endif; ?>
+                        <div class="site-text" style="margin-right: auto;">
+                            <p class="site-title">
+                                <a href="<?php echo esc_url( home_url( '/' ) ); ?>" rel="home">
+                                    <?php bloginfo( 'name' ); ?>
+                                </a>
+                            </p>
+                            <?php $description = get_bloginfo( 'description', 'display' ); ?>
+                            <?php if ( $description ) : ?>
+                                <p class="site-description"><?php echo esc_html( $description ); ?></p>
+                            <?php endif; ?>
+                        </div><!-- .site-text -->
                     </div><!-- .site-identity -->
                 </div><!-- .site-banner-inner -->
             </div><!-- .site-banner -->
@@ -73,6 +75,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                         <?php
                         wp_nav_menu( [
                             'theme_location' => 'primary',
+                            'menu'           => 'Main Menu',
                             'menu_id'        => 'primary-menu',
                             'depth'          => 2,
                         ] );
@@ -98,6 +101,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 
                 </div><!-- .site-nav-inner -->
             </div><!-- .site-nav-bar -->
+            <hr class="nav-divider">
+            <div class="nav-ad-banner">
+                <broadstreet-zone zone-id="179417" uri-keywords="true" soft-keywords="true"></broadstreet-zone>
+            </div>
+            <hr class="nav-divider">
 
         </header><!-- #masthead -->
 

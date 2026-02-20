@@ -35,9 +35,32 @@ function cp_enqueue_global_assets() {
     // Pass config to JS
     wp_localize_script( 'cp-global-js', 'CarolinaPanoramaConfig', [
         'apiBaseUrl' => get_option( 'cp_api_base_url', 'https://cms.carolinapanorama.org' ),
-        'siteUrl' => site_url(),
-        'restUrl' => rest_url(),
+        'siteUrl'    => site_url(),
+        'restUrl'    => rest_url(),
+        'restNonce'  => wp_create_nonce( 'wp_rest' ),
     ]);
+
+    // Inject WP categories (with color codes) so JS widgets never need
+    // to fetch from the external CMS API.
+    $raw_cats = get_terms( [
+        'taxonomy'   => 'category',
+        'hide_empty' => false,
+        'fields'     => 'all',
+    ] );
+    $cats_data = [];
+    if ( ! is_wp_error( $raw_cats ) ) {
+        foreach ( $raw_cats as $term ) {
+            $color = get_term_meta( $term->term_id, '_color_code', true ) ?: '#3b82f6';
+            $cats_data[] = [
+                'id'         => $term->term_id,
+                'name'       => $term->name,
+                'slug'       => $term->slug,
+                'color_code' => $color,
+                'link'       => get_term_link( $term ),
+            ];
+        }
+    }
+    wp_localize_script( 'cp-global-js', 'cpCategories', $cats_data );
 }
 add_action( 'wp_enqueue_scripts', 'cp_enqueue_global_assets', 10 );
 
@@ -114,6 +137,11 @@ add_theme_support( 'automatic-feed-links' );
 * }
 * add_action( 'widgets_init', 'cp_register_widget_areas' );
 **/
+
+/**
+ * Post types & taxonomies
+ */
+require_once get_template_directory() . '/inc/post-types.php';
 
 /**
  * Include shortcodes
